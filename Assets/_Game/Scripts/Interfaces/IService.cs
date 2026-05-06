@@ -1,0 +1,1 @@
+﻿namespace BillGameCore.Interfaces { public interface IService { } }
