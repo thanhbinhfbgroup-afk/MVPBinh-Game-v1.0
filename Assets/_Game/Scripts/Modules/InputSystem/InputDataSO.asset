@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: eb3d398fd1d0a3047b966c5516434111, type: 3}
   m_Name: InputDataSO
   m_EditorClassIdentifier: Assembly-CSharp::BillGameCore.InputSystem.InputData
-  inputActions: {fileID: 0}
+  inputActions: {fileID: -944628639613478452, guid: 118703bee1dcef843abe0d192ba327eb, type: 3}
   moveActionName: Move
   attackActionName: Attack
   interactActionName: Interact
