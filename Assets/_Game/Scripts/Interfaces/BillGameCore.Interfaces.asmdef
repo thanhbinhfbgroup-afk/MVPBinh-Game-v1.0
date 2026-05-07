@@ -1,0 +1,11 @@
+{
+    "name": "BillGameCore.Interfaces",
+    "references": [
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
