@@ -1,13 +1,12 @@
 {
-    "name": "BillGameCore.Modules.Player",
+    "name": "BillGameCore.Main",
     "rootNamespace": "",
     "references": [
-        "BillGameCore.Interfaces",
-        "BillGameCore.Core",
         "VContainer",
+        "BillGameCore.Interfaces",
         "MessagePipe",
         "MessagePipe.VContainer",
-        "tổng"
+        "BillGameCore.Modules.Input"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
