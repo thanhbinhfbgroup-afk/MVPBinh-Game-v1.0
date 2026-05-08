@@ -4,7 +4,7 @@ using System.IO;
 using System.Text;
 
 /// <summary>
-/// BillGameCore Init Tool v3.0
+/// BillGameCore Init Tool v3.1
 /// Blueprint: Modular Architecture + VContainer + MessagePipe
 /// Convention: Interface-First | No Hard References | Data-Driven
 /// Groups:
@@ -25,11 +25,9 @@ public static class BillGameCoreInitTool
         CreateCompositionRoot();
         CreateGlobalInterfaces();
         CreateSignals();
-        CreateSamplePlayerModule();
-        CreateRegistrationGuide();
 
         AssetDatabase.Refresh();
-        Debug.Log("<color=cyan><b>[BillGameCore v3.0]</b></color> <color=green>Khởi tạo thành công!</color>");
+        Debug.Log("<color=cyan><b>[BillGameCore v3.1]</b></color> <color=green>Khởi tạo thành công!</color>");
     }
 
     // ─────────────────────────────────────────────
@@ -78,15 +76,8 @@ public static class BillGameCoreInitTool
             "Data/Settings",
             "Scripts/Core",
             "Scripts/Composition",
-
             "Scripts/Interfaces/Signals",
-
-            // Player — Entity group (mẫu)
-            "Scripts/Modules/Player/Interfaces",
-            "Scripts/Modules/Player/Providers",
-            "Scripts/Modules/Player/Views",
-            "Scripts/Modules/Player/Spawners",
-
+            "Scripts/Modules",
             "Scripts/Editor",
             "Scripts/Scenes",
         };
@@ -115,7 +106,7 @@ public static class BillGameCoreInitTool
     {
         string[] folders =
         {
-            $"Scripts/Modules/{moduleName}/Interfaces",  // tạo sẵn, dùng khi cần
+            $"Scripts/Modules/{moduleName}/Interfaces",
             $"Scripts/Modules/{moduleName}/Providers",
             $"Scripts/Modules/{moduleName}/Views",
         };
@@ -146,15 +137,10 @@ public static class BillGameCoreInitTool
             new[] { "BillGameCore.Interfaces", "VContainer", "VContainer.Unity", "MessagePipe", "MessagePipe.VContainer" },
             editorOnly: false);
 
-        WriteAsmdef("Scripts/Modules/Player", "BillGameCore.Modules.Player",
-            new[] { "BillGameCore.Interfaces", "BillGameCore.Core", "VContainer", "VContainer.Unity", "MessagePipe", "MessagePipe.VContainer" },
-            editorOnly: false);
-
         WriteAsmdef("Scripts/Composition", "BillGameCore.Composition",
             new[] {
                 "BillGameCore.Interfaces",
                 "BillGameCore.Core",
-                "BillGameCore.Modules.Player",
                 // [ADD NEW MODULE ASMDEFS HERE]
                 "VContainer", "VContainer.Unity", "MessagePipe", "MessagePipe.VContainer"
             },
@@ -170,19 +156,18 @@ public static class BillGameCoreInitTool
     // ─────────────────────────────────────────────
 
     /// <summary>
-    /// Entity Module: Provider + Logic + View + Spawner + Interface + Signal + Asmdef
+    /// Entity Module: folders + Signal + Interface + Provider + Logic + View + Spawner + Asmdef
     /// Áp dụng cho: Player, Enemy, Boss, NPC, Projectile, Mount
     /// </summary>
     private static void CreateEntityModule(string name)
     {
-        string lower = name.ToLower();
         CreateEntityFolders(name);
 
-        // Signal
-        WriteFile($"Scripts/Interfaces/Signals/{name}Signals.cs", $@"// [MODULE: {name}]
+        WriteFile($"Scripts/Interfaces/Signals/{name}Signals.cs",
+$@"// [MODULE: {name}]
 // [TYPE: Signal]
 // [SCOPE: SceneLifetimeScope]
-// Thêm vào SceneLifetimeScope: builder.RegisterMessageBroker<{name}DiedSignal>(options);
+// TODO: đăng ký trong SceneLifetimeScope: builder.RegisterMessageBroker<{name}DiedSignal>(options);
 namespace BillGameCore.Interfaces.Signals
 {{
     public struct {name}DiedSignal
@@ -193,8 +178,8 @@ namespace BillGameCore.Interfaces.Signals
     // [ADD MORE {name.ToUpper()} SIGNALS HERE]
 }}");
 
-        // Interface
-        WriteFile($"Scripts/Modules/{name}/Interfaces/I{name}Service.cs", $@"// [MODULE: {name}]
+        WriteFile($"Scripts/Modules/{name}/Interfaces/I{name}Service.cs",
+$@"// [MODULE: {name}]
 // [TYPE: Interface]
 // [SCOPE: SceneLifetimeScope]
 // [REGISTER_IN: SceneLifetimeScope.cs → Scene Services block]
@@ -202,19 +187,18 @@ namespace BillGameCore.Interfaces
 {{
     public interface I{name}Service : IBaseService
     {{
-        // khai báo capability của entity
-        int GetId();
+        // TODO: khai báo capability của entity
     }}
 }}");
 
-        // Provider — bridge Unity input/data → Logic
-        WriteFile($"Scripts/Modules/{name}/Providers/{name}Provider.cs", $@"// [MODULE: {name}]
+        WriteFile($"Scripts/Modules/{name}/Providers/{name}Provider.cs",
+$@"// [MODULE: {name}]
 // [TYPE: Provider]
 // [SCOPE: SceneLifetimeScope]
-// [DEPENDS_ON: {name}Logic]
 // [SIGNAL_PUBLISHES: none]
 // [SIGNAL_SUBSCRIBES: none]
-// Provider: đọc input / data từ Unity-world và đẩy vào Logic
+// [DEPENDS_ON: {name}Logic]
+// Provider: MonoBehaviour — bridge Unity world → Logic (input, physics data...)
 using VContainer;
 using UnityEngine;
 
@@ -232,14 +216,13 @@ namespace BillGameCore.Modules.{name}
 
         private void Update()
         {{
-            // Bridge Unity input → Logic
-            // VD: _logic.SetMoveDirection(Input.GetAxis(...));
+            // TODO: đọc data từ Unity world, đẩy vào _logic
         }}
     }}
 }}");
 
-        // Logic — pure calculation, no Unity knowledge
-        WriteFile($"Scripts/Modules/{name}/Providers/{name}Logic.cs", $@"// [MODULE: {name}]
+        WriteFile($"Scripts/Modules/{name}/Providers/{name}Logic.cs",
+$@"// [MODULE: {name}]
 // [TYPE: Logic]
 // [SCOPE: SceneLifetimeScope]
 // [SIGNAL_PUBLISHES: {name}DiedSignal]
@@ -263,21 +246,16 @@ namespace BillGameCore.Modules.{name}
 
         public void Initialize() {{ }}
 
-        // Thuần tính toán — KHÔNG MonoBehaviour, KHÔNG Transform trực tiếp
-        // Dùng Vector2/Mathf nếu cần
-        public void OnDie(int id)
-        {{
-            _publisher.Publish(new Interfaces.Signals.{name}DiedSignal(id));
-        }}
+        // TODO: implement logic thuần C#
     }}
 }}");
 
-        // View — MonoBehaviour, display only
-        WriteFile($"Scripts/Modules/{name}/Views/{name}View.cs", $@"// [MODULE: {name}]
+        WriteFile($"Scripts/Modules/{name}/Views/{name}View.cs",
+$@"// [MODULE: {name}]
 // [TYPE: View]
 // [SCOPE: SceneLifetimeScope]
 // [DEPENDS_ON: none]
-// View: MonoBehaviour — chỉ hiển thị / animation / VFX
+// View: MonoBehaviour — chỉ animation / VFX / sound cue
 // KHÔNG chứa if/else logic game
 using UnityEngine;
 
@@ -287,19 +265,16 @@ namespace BillGameCore.Modules.{name}
     {{
         [SerializeField] private Animator _animator;
 
-        // Gọi từ Provider hoặc Logic thông qua event/delegate
-        public void PlayIdleAnimation() => _animator.SetTrigger(""Idle"");
-        public void PlayDieAnimation() => _animator.SetTrigger(""Die"");
-        public void PlayAttackAnimation() => _animator.SetTrigger(""Attack"");
+        // TODO: các method hiển thị — gọi từ Provider qua event/delegate
     }}
 }}");
 
-        // Spawner — creates body and injects logic
-        WriteFile($"Scripts/Modules/{name}/Spawners/{name}Spawner.cs", $@"// [MODULE: {name}]
+        WriteFile($"Scripts/Modules/{name}/Spawners/{name}Spawner.cs",
+$@"// [MODULE: {name}]
 // [TYPE: Spawner]
 // [SCOPE: SceneLifetimeScope]
 // [DEPENDS_ON: IObjectResolver]
-// Spawner: tạo thân thể (Instantiate), bơm logic vào — KHÔNG nhúng vào Scope trực tiếp
+// Spawner: Instantiate prefab, inject dependencies qua VContainer — class riêng, KHÔNG nhúng vào Scope
 using VContainer;
 using UnityEngine;
 using VContainer.Unity;
@@ -310,25 +285,21 @@ namespace BillGameCore.Modules.{name}
     {{
         private readonly IObjectResolver _resolver;
 
-        // Kéo prefab vào qua RegisterInstance hoặc ScriptableObject config
-        private GameObject _prefab;
-
         [Inject]
         public {name}Spawner(IObjectResolver resolver)
         {{
             _resolver = resolver;
         }}
 
-        public {name}View Spawn(Vector3 position)
+        public {name}View Spawn(GameObject prefab, Vector3 position)
         {{
-            var go = Object.Instantiate(_prefab, position, Quaternion.identity);
-            _resolver.InjectGameObject(go);   // VContainer inject vào tất cả MonoBehaviour trong prefab
+            var go = Object.Instantiate(prefab, position, Quaternion.identity);
+            _resolver.InjectGameObject(go);
             return go.GetComponent<{name}View>();
         }}
     }}
 }}");
 
-        // Asmdef
         WriteAsmdef($"Scripts/Modules/{name}", $"BillGameCore.Modules.{name}",
             new[] { "BillGameCore.Interfaces", "BillGameCore.Core", "VContainer", "VContainer.Unity", "MessagePipe", "MessagePipe.VContainer" },
             editorOnly: false);
@@ -337,18 +308,18 @@ namespace BillGameCore.Modules.{name}
     }
 
     /// <summary>
-    /// Interaction Module: Logic + View + (optional Interface + Signal) + Asmdef
+    /// Interaction Module: folders + Signal + Interface + Logic + View + Asmdef
     /// Áp dụng cho: Chest, Door, HealPoint, Trap, Switch, Shrine...
     /// </summary>
     private static void CreateInteractionModule(string name)
     {
         CreateInteractionFolders(name);
 
-        // Signal (tạo sẵn — uncommnet khi cần)
-        WriteFile($"Scripts/Interfaces/Signals/{name}Signals.cs", $@"// [MODULE: {name}]
+        WriteFile($"Scripts/Interfaces/Signals/{name}Signals.cs",
+$@"// [MODULE: {name}]
 // [TYPE: Signal]
 // [SCOPE: SceneLifetimeScope]
-// Uncomment và đăng ký trong SceneLifetimeScope nếu cần:
+// TODO: uncomment và đăng ký trong SceneLifetimeScope nếu cần:
 // builder.RegisterMessageBroker<{name}ActivatedSignal>(options);
 namespace BillGameCore.Interfaces.Signals
 {{
@@ -359,12 +330,12 @@ namespace BillGameCore.Interfaces.Signals
     }}
 }}");
 
-        // Interface (tạo sẵn — chỉ dùng nếu module khác cần inject)
-        WriteFile($"Scripts/Modules/{name}/Interfaces/I{name}Service.cs", $@"// [MODULE: {name}]
+        WriteFile($"Scripts/Modules/{name}/Interfaces/I{name}Service.cs",
+$@"// [MODULE: {name}]
 // [TYPE: Interface]
 // [SCOPE: SceneLifetimeScope]
-// CHỈ tạo Interface này nếu module khác cần inject I{name}Service.
-// Nếu không có module nào dùng → có thể xoá file này.
+// CHỈ giữ file này nếu module khác cần inject I{name}Service.
+// Nếu không → xoá file này.
 namespace BillGameCore.Interfaces
 {{
     public interface I{name}Service
@@ -374,8 +345,8 @@ namespace BillGameCore.Interfaces
     }}
 }}");
 
-        // Logic — state machine, pure C#
-        WriteFile($"Scripts/Modules/{name}/Providers/{name}Logic.cs", $@"// [MODULE: {name}]
+        WriteFile($"Scripts/Modules/{name}/Providers/{name}Logic.cs",
+$@"// [MODULE: {name}]
 // [TYPE: Logic]
 // [SCOPE: SceneLifetimeScope]
 // [SIGNAL_PUBLISHES: {name}ActivatedSignal]
@@ -389,11 +360,8 @@ namespace BillGameCore.Modules.{name}
 {{
     public class {name}Logic
     {{
-        private bool _isActivated;
+        public bool IsActivated {{ get; private set; }}
 
-        public bool IsActivated => _isActivated;
-
-        // Callback để View react khi trạng thái thay đổi (thay vì direct reference)
         public event Action OnActivated;
         public event Action OnReset;
 
@@ -407,27 +375,27 @@ namespace BillGameCore.Modules.{name}
 
         public void Interact(int objectId)
         {{
-            if (_isActivated) return;
-            _isActivated = true;
+            if (IsActivated) return;
+            IsActivated = true;
             _publisher.Publish(new Interfaces.Signals.{name}ActivatedSignal(objectId));
             OnActivated?.Invoke();
         }}
 
         public void Reset()
         {{
-            _isActivated = false;
+            IsActivated = false;
             OnReset?.Invoke();
         }}
     }}
 }}");
 
-        // View — MonoBehaviour, animation + visual feedback
-        WriteFile($"Scripts/Modules/{name}/Views/{name}View.cs", $@"// [MODULE: {name}]
+        WriteFile($"Scripts/Modules/{name}/Views/{name}View.cs",
+$@"// [MODULE: {name}]
 // [TYPE: View]
 // [SCOPE: SceneLifetimeScope]
 // [DEPENDS_ON: {name}Logic]
 // View: MonoBehaviour — animation + visual feedback khi trạng thái thay đổi
-// Nhận lệnh từ Logic qua event — KHÔNG chứa logic game
+// KHÔNG chứa logic game
 using VContainer;
 using UnityEngine;
 
@@ -460,12 +428,11 @@ namespace BillGameCore.Modules.{name}
                 _logic.Interact(gameObject.GetInstanceID());
         }}
 
-        private void HandleActivated() => _animator.SetTrigger(""Activate"");
-        private void HandleReset()     => _animator.SetTrigger(""Reset"");
+        private void HandleActivated() {{ /* TODO: trigger animation */ }}
+        private void HandleReset()     {{ /* TODO: trigger reset animation */ }}
     }}
 }}");
 
-        // Asmdef
         WriteAsmdef($"Scripts/Modules/{name}", $"BillGameCore.Modules.{name}",
             new[] { "BillGameCore.Interfaces", "BillGameCore.Core", "VContainer", "VContainer.Unity", "MessagePipe", "MessagePipe.VContainer" },
             editorOnly: false);
@@ -474,30 +441,29 @@ namespace BillGameCore.Modules.{name}
     }
 
     /// <summary>
-    /// Service Module: Interface + Manager + Signal + Asmdef
+    /// Service Module: folders + Signal + Interface + Manager + Asmdef
     /// Áp dụng cho: Inventory, Economy, Save, Audio, Combat, Harvesting, Building...
     /// </summary>
     private static void CreateServiceModule(string name)
     {
         CreateServiceFolders(name);
 
-        // Signal
-        WriteFile($"Scripts/Interfaces/Signals/{name}Signals.cs", $@"// [MODULE: {name}]
+        WriteFile($"Scripts/Interfaces/Signals/{name}Signals.cs",
+$@"// [MODULE: {name}]
 // [TYPE: Signal]
 // [SCOPE: ProjectLifetimeScope]
-// Thêm vào ProjectLifetimeScope: builder.RegisterMessageBroker<{name}ChangedSignal>(options);
+// TODO: đăng ký trong ProjectLifetimeScope: builder.RegisterMessageBroker<{name}ChangedSignal>(options);
 namespace BillGameCore.Interfaces.Signals
 {{
     public struct {name}ChangedSignal
     {{
-        // thêm dữ liệu cần truyền
-        public {name}ChangedSignal(int dummy) {{ }}
+        // TODO: thêm dữ liệu cần truyền
     }}
     // [ADD MORE {name.ToUpper()} SIGNALS HERE]
 }}");
 
-        // Interface
-        WriteFile($"Scripts/Modules/{name}/Interfaces/I{name}Service.cs", $@"// [MODULE: {name}]
+        WriteFile($"Scripts/Modules/{name}/Interfaces/I{name}Service.cs",
+$@"// [MODULE: {name}]
 // [TYPE: Interface]
 // [SCOPE: ProjectLifetimeScope]
 // [REGISTER_IN: ProjectLifetimeScope.cs → Global Services block]
@@ -505,12 +471,12 @@ namespace BillGameCore.Interfaces
 {{
     public interface I{name}Service : IBaseService
     {{
-        // khai báo các method public cần thiết
+        // TODO: khai báo các method public cần thiết
     }}
 }}");
 
-        // Manager
-        WriteFile($"Scripts/Modules/{name}/Providers/{name}Manager.cs", $@"// [MODULE: {name}]
+        WriteFile($"Scripts/Modules/{name}/Providers/{name}Manager.cs",
+$@"// [MODULE: {name}]
 // [TYPE: Manager]
 // [SCOPE: ProjectLifetimeScope]
 // [SIGNAL_PUBLISHES: {name}ChangedSignal]
@@ -544,7 +510,6 @@ namespace BillGameCore.Modules.{name}
     }}
 }}");
 
-        // Asmdef
         WriteAsmdef($"Scripts/Modules/{name}", $"BillGameCore.Modules.{name}",
             new[] { "BillGameCore.Interfaces", "BillGameCore.Core", "VContainer", "VContainer.Unity", "MessagePipe", "MessagePipe.VContainer" },
             editorOnly: false);
@@ -553,160 +518,17 @@ namespace BillGameCore.Modules.{name}
     }
 
     // ─────────────────────────────────────────────
-    // SAMPLE PLAYER MODULE (chạy lần đầu)
-    // ─────────────────────────────────────────────
-    private static void CreateSamplePlayerModule()
-    {
-        // Interface
-        WriteFile("Scripts/Modules/Player/Interfaces/IPlayerService.cs", @"// [MODULE: Player]
-// [TYPE: Interface]
-// [SCOPE: ProjectLifetimeScope]
-// [REGISTER_IN: ProjectLifetimeScope → builder.Register<IPlayerService, PlayerManager>]
-namespace BillGameCore.Interfaces
-{
-    public interface IPlayerService : IBaseService
-    {
-        void Move(float speed);
-        int GetLevel();
-        void LevelUp();
-    }
-}");
-
-        // Provider
-        WriteFile("Scripts/Modules/Player/Providers/PlayerProvider.cs", @"// [MODULE: Player]
-// [TYPE: Provider]
-// [SCOPE: ProjectLifetimeScope (hoặc Scene nếu tách riêng)]
-// [DEPENDS_ON: IPlayerService, IInputService]
-// Provider: bridge Unity input → PlayerLogic
-// TODO: thay bằng IInputService khi module Input đã có
-using VContainer;
-using UnityEngine;
-
-namespace BillGameCore.Modules.Player
-{
-    public class PlayerProvider : MonoBehaviour
-    {
-        [Inject] private IPlayerService _playerService;
-
-        private void Update()
-        {
-            // Tạm: dùng legacy Input để test trước khi có IInputService
-            float h = UnityEngine.Input.GetAxisRaw(""Horizontal"");
-            float v = UnityEngine.Input.GetAxisRaw(""Vertical"");
-            if (h != 0 || v != 0)
-                _playerService.Move(new UnityEngine.Vector2(h, v).magnitude);
-        }
-    }
-}");
-
-        // Logic (giữ PlayerManager cho backward-compat với Scope hiện tại)
-        WriteFile("Scripts/Modules/Player/Providers/PlayerManager.cs", @"// [MODULE: Player]
-// [TYPE: Manager]
-// [SCOPE: ProjectLifetimeScope]
-// [SIGNAL_PUBLISHES: PlayerLevelUpSignal]
-// [SIGNAL_SUBSCRIBES: none]
-// [DEPENDS_ON: none]
-// [REGISTER_IN: Scripts/Composition/ProjectLifetimeScope.cs → Global Services block]
-using MessagePipe;
-using VContainer;
-using UnityEngine;
-using BillGameCore.Interfaces;
-using BillGameCore.Interfaces.Signals;
-
-namespace BillGameCore.Modules.Player
-{
-    public class PlayerManager : IPlayerService
-    {
-        private int _level = 1;
-        private readonly IPublisher<PlayerLevelUpSignal> _publisher;
-
-        [Inject]
-        public PlayerManager(IPublisher<PlayerLevelUpSignal> publisher)
-        {
-            _publisher = publisher;
-        }
-
-        public void Initialize() => Debug.Log(""[PlayerManager] Initialized."");
-        public void Move(float speed) => Debug.Log($""[PlayerManager] Speed: {speed}"");
-        public int GetLevel() => _level;
-
-        public void LevelUp()
-        {
-            _level++;
-            _publisher.Publish(new PlayerLevelUpSignal(_level));
-            Debug.Log($""[PlayerManager] Level up → {_level}"");
-        }
-    }
-}");
-
-        // View
-        WriteFile("Scripts/Modules/Player/Views/PlayerView.cs", @"// [MODULE: Player]
-// [TYPE: View]
-// [SCOPE: Scene]
-// [DEPENDS_ON: none]
-// View: chỉ hiển thị / animation. KHÔNG chứa logic game.
-using UnityEngine;
-
-namespace BillGameCore.Modules.Player
-{
-    public class PlayerView : MonoBehaviour
-    {
-        [SerializeField] private Animator _animator;
-        [SerializeField] private SpriteRenderer _spriteRenderer;
-
-        public void SetMoving(bool isMoving) => _animator.SetBool(""isMoving"", isMoving);
-        public void SetFlipX(bool flipX) => _spriteRenderer.flipX = flipX;
-        public void PlayLevelUpVFX() => _animator.SetTrigger(""LevelUp"");
-    }
-}");
-
-        // Spawner (optional cho Player vì thường singleton)
-        WriteFile("Scripts/Modules/Player/Spawners/PlayerSpawner.cs", @"// [MODULE: Player]
-// [TYPE: Spawner]
-// [SCOPE: SceneLifetimeScope]
-// [DEPENDS_ON: IObjectResolver]
-// Spawner: tạo Player prefab và inject toàn bộ dependencies vào
-// Optional cho Player vì thường chỉ có 1 Player trong scene
-using VContainer;
-using UnityEngine;
-using VContainer.Unity;
-
-namespace BillGameCore.Modules.Player
-{
-    public class PlayerSpawner
-    {
-        private readonly IObjectResolver _resolver;
-
-        [Inject]
-        public PlayerSpawner(IObjectResolver resolver)
-        {
-            _resolver = resolver;
-        }
-
-        public PlayerView Spawn(GameObject prefab, Vector3 position)
-        {
-            var go = Object.Instantiate(prefab, position, Quaternion.identity);
-            _resolver.InjectGameObject(go);
-            return go.GetComponent<PlayerView>();
-        }
-    }
-}");
-    }
-
-    // ─────────────────────────────────────────────
     // COMPOSITION ROOT
     // ─────────────────────────────────────────────
     private static void CreateCompositionRoot()
     {
-        WriteFile("Scripts/Composition/ProjectLifetimeScope.cs", @"// [SCOPE: ProjectLifetimeScope] [LIFETIME: Singleton — alive entire game]
-// [ASSEMBLY: BillGameCore.Composition — được phép depend tất cả Modules]
-// [REGISTER HERE]: Tất cả service sống suốt game
-// Khi thêm module mới: thêm Register vào đây VÀ thêm asmdef ref vào BillGameCore.Composition.asmdef
+        WriteFile("Scripts/Composition/ProjectLifetimeScope.cs",
+@"// [SCOPE: ProjectLifetimeScope] [LIFETIME: Singleton — alive entire game]
+// [REGISTER HERE]: tất cả service sống suốt game
+// Khi thêm module mới: thêm Register vào đây VÀ thêm asmdef vào BillGameCore.Composition.asmdef
 using VContainer;
 using VContainer.Unity;
 using MessagePipe;
-using BillGameCore.Interfaces.Signals;
-using BillGameCore.Modules.Player;
 
 namespace BillGameCore.Composition
 {
@@ -717,22 +539,17 @@ namespace BillGameCore.Composition
             var options = builder.RegisterMessagePipe();
 
             // ── Global Signals ────────────────────────────────
-            builder.RegisterMessageBroker<PlayerLevelUpSignal>(options);
             // [ADD GLOBAL SIGNALS HERE]
 
             // ── Global Services ───────────────────────────────
-            builder.Register<IPlayerService, PlayerManager>(Lifetime.Singleton);
-            // builder.Register<IInventoryService, InventoryManager>(Lifetime.Singleton);
-            // builder.Register<IMoneyService,     MoneyManager    >(Lifetime.Singleton);
-            // builder.Register<ISaveService,      SaveManager     >(Lifetime.Singleton);
-            // builder.Register<IAudioService,     AudioManager    >(Lifetime.Singleton);
+            // [ADD GLOBAL SERVICES HERE]
         }
     }
 }");
 
-        WriteFile("Scripts/Composition/SceneLifetimeScope.cs", @"// [SCOPE: SceneLifetimeScope] [LIFETIME: Scoped — alive 1 scene]
-// [ASSEMBLY: BillGameCore.Composition — được phép depend tất cả Modules]
-// [REGISTER HERE]: Tất cả service chỉ sống trong 1 scene
+        WriteFile("Scripts/Composition/SceneLifetimeScope.cs",
+@"// [SCOPE: SceneLifetimeScope] [LIFETIME: Scoped — alive 1 scene]
+// [REGISTER HERE]: tất cả service chỉ sống trong 1 scene
 using VContainer;
 using VContainer.Unity;
 using MessagePipe;
@@ -746,22 +563,16 @@ namespace BillGameCore.Composition
             var options = builder.RegisterMessagePipe();
 
             // ── Scene Signals ─────────────────────────────────
-            // Entity signals:
-            // builder.RegisterMessageBroker<EnemyDiedSignal>(options);
-            // Interaction signals:
-            // builder.RegisterMessageBroker<ChestActivatedSignal>(options);
+            // [ADD SCENE SIGNALS HERE]
 
             // ── Scene Services — Entities ─────────────────────
-            // builder.Register<EnemyLogic>(Lifetime.Transient);
-            // builder.Register<EnemySpawner>(Lifetime.Scoped);
-            // builder.RegisterComponentInHierarchy<EnemyProvider>();
+            // [ADD ENTITY REGISTRATIONS HERE]
 
             // ── Scene Services — Interactions ─────────────────
-            // builder.Register<ChestLogic>(Lifetime.Transient);
-            // builder.RegisterComponentInHierarchy<ChestView>();
+            // [ADD INTERACTION REGISTRATIONS HERE]
 
             // ── Scene Services — Service Modules ─────────────
-            // builder.Register<IHarvestingSystem, HarvestingManager>(Lifetime.Scoped);
+            // [ADD SCENE SERVICE REGISTRATIONS HERE]
         }
     }
 }");
@@ -772,7 +583,8 @@ namespace BillGameCore.Composition
     // ─────────────────────────────────────────────
     private static void CreateGlobalInterfaces()
     {
-        WriteFile("Scripts/Interfaces/IBaseService.cs", @"// [INTERFACE: Global] All services optionally implement this.
+        WriteFile("Scripts/Interfaces/IBaseService.cs",
+@"// [INTERFACE: Global] All services optionally implement this.
 namespace BillGameCore.Interfaces
 {
     public interface IBaseService
@@ -783,96 +595,11 @@ namespace BillGameCore.Interfaces
     }
 
     // ─────────────────────────────────────────────
-    // SIGNALS
+    // SIGNALS — placeholder file duy nhất lúc init
     // ─────────────────────────────────────────────
     private static void CreateSignals()
     {
-        WriteFile("Scripts/Interfaces/Signals/PlayerSignals.cs", @"// [SIGNALS: Player] [SCOPE: Global — register in ProjectLifetimeScope]
-namespace BillGameCore.Interfaces.Signals
-{
-    public struct PlayerLevelUpSignal
-    {
-        public int NewLevel;
-        public PlayerLevelUpSignal(int level) => NewLevel = level;
-    }
-    // [ADD MORE PLAYER SIGNALS HERE]
-}");
-    }
-
-    // ─────────────────────────────────────────────
-    // REGISTRATION GUIDE
-    // ─────────────────────────────────────────────
-    private static void CreateRegistrationGuide()
-    {
-        WriteFile("Scripts/Composition/RegistrationGuide.cs", @"// ╔══════════════════════════════════════════════════════════════════════╗
-// ║              BILLGAMECORE — REGISTRATION GUIDE v3.0                 ║
-// ║   Single source of truth cho VContainer setup.                      ║
-// ║   Update file này mỗi khi thêm Service/Signal mới.                 ║
-// ║   Symbols: [x] = done  |  [ ] = pending                            ║
-// ╚══════════════════════════════════════════════════════════════════════╝
-//
-// ── MODULE GROUPS ─────────────────────────────────────────────────────
-//   Entity      → Provider + Logic + View + Spawner  (Player, Enemy, Boss, NPC, Projectile, Mount)
-//   Interaction → Logic + View (± Interface)         (Chest, Door, HealPoint, Trap, Switch)
-//   Service     → Manager                            (Inventory, Economy, Save, Audio, Combat)
-//
-// ── PROJECT LIFETIME SCOPE ────────────────────────────────────────────
-//   SIGNALS:
-//   [x] PlayerLevelUpSignal          [MODULE: Player]     [GROUP: Entity]
-//   [ ] ItemPickedUpSignal           [MODULE: Inventory]  [GROUP: Service]
-//   [ ] InventoryFullSignal          [MODULE: Inventory]  [GROUP: Service]
-//
-//   SERVICES:
-//   [x] IPlayerService  → PlayerManager    [MODULE: Player]    [GROUP: Entity]
-//   [ ] IInventoryService → InventoryManager [MODULE: Inventory] [GROUP: Service]
-//   [ ] IMoneyService   → MoneyManager     [MODULE: Economy]   [GROUP: Service]
-//   [ ] ISaveService    → SaveManager      [MODULE: Save]      [GROUP: Service]
-//   [ ] IAudioService   → AudioManager     [MODULE: Audio]     [GROUP: Service]
-//
-// ── SCENE LIFETIME SCOPE ──────────────────────────────────────────────
-//   ENTITY SIGNALS:
-//   [ ] EnemyDiedSignal              [MODULE: Enemy]      [GROUP: Entity]
-//
-//   INTERACTION SIGNALS:
-//   [ ] ChestActivatedSignal         [MODULE: Chest]      [GROUP: Interaction]
-//   [ ] DoorOpenedSignal             [MODULE: Door]       [GROUP: Interaction]
-//
-//   ENTITY REGISTRATIONS:
-//   [ ] EnemyLogic    (Transient)    [MODULE: Enemy]      [GROUP: Entity]
-//   [ ] EnemySpawner  (Scoped)       [MODULE: Enemy]      [GROUP: Entity]
-//   [ ] EnemyProvider (ComponentInHierarchy)
-//
-//   INTERACTION REGISTRATIONS:
-//   [ ] ChestLogic    (Transient)    [MODULE: Chest]      [GROUP: Interaction]
-//   [ ] ChestView     (ComponentInHierarchy)
-//
-//   SERVICE REGISTRATIONS:
-//   [ ] IHarvestingSystem → HarvestingManager (Scoped)
-//   [ ] IBuildingSystem   → BuildingManager   (Scoped)
-//
-// ── ASMDEF MAP ────────────────────────────────────────────────────────
-//   BillGameCore.Interfaces          (no deps)
-//         ↑
-//   BillGameCore.Core                (→ Interfaces, VContainer, MessagePipe)
-//         ↑
-//   BillGameCore.Modules.Player      [x] done
-//   BillGameCore.Modules.Enemy       [ ] todo
-//   BillGameCore.Modules.Inventory   [ ] todo
-//   BillGameCore.Modules.Economy     [ ] todo
-//   BillGameCore.Modules.Chest       [ ] todo
-//   BillGameCore.Modules.Door        [ ] todo
-//         ↑
-//   BillGameCore.Composition         (→ Interfaces, Core, tất cả Modules)
-//   BillGameCore.Editor              (→ Core, Interfaces) [editorOnly]
-//
-// ⚠ KHI THÊM MODULE MỚI:
-//   1. Dùng menu BillGameCore/New Module/[Entity|Interaction|Service]
-//   2. Thêm asmdef vào BillGameCore.Composition.asmdef references
-//   3. Register vào ProjectLifetimeScope.cs hoặc SceneLifetimeScope.cs
-//   4. Cập nhật file này
-
-// This is a documentation-only file — no runtime code.
-");
+        WriteFile("Scripts/Interfaces/Signals/.gitkeep", "");
     }
 
     // ─────────────────────────────────────────────
@@ -885,39 +612,41 @@ namespace BillGameCore.Interfaces.Signals
         sb.AppendLine("<color=yellow>⚠ 3 bước còn lại bạn phải làm thủ công:</color>");
         sb.AppendLine("");
 
-        if (group == "Entity" || group == "Service")
+        if (group == "Entity")
         {
-            string scope = group == "Entity" ? "SceneLifetimeScope" : "ProjectLifetimeScope";
-            sb.AppendLine($"<b>1. Thêm asmdef vào Composition:</b>");
-            sb.AppendLine($"   → Mở <b>BillGameCore.Composition.asmdef</b>");
-            sb.AppendLine($"   → Thêm: <b>\"BillGameCore.Modules.{name}\"</b> vào mảng references");
+            sb.AppendLine("<b>1. Thêm asmdef vào Composition:</b>");
+            sb.AppendLine($"   BillGameCore.Composition.asmdef → thêm \"BillGameCore.Modules.{name}\"");
             sb.AppendLine("");
-            sb.AppendLine($"<b>2. Register signal trong {scope}.cs:</b>");
+            sb.AppendLine("<b>2. Đăng ký signal trong SceneLifetimeScope.cs:</b>");
             sb.AppendLine($"   builder.RegisterMessageBroker<{name}DiedSignal>(options);");
             sb.AppendLine("");
-            sb.AppendLine($"<b>3. Register service trong {scope}.cs:</b>");
-            if (group == "Entity")
-            {
-                sb.AppendLine($"   builder.Register<{name}Logic>(Lifetime.Transient);");
-                sb.AppendLine($"   builder.Register<{name}Spawner>(Lifetime.Scoped);");
-                sb.AppendLine($"   builder.RegisterComponentInHierarchy<{name}Provider>();");
-            }
-            else
-            {
-                sb.AppendLine($"   builder.Register<I{name}Service, {name}Manager>(Lifetime.Singleton);");
-            }
+            sb.AppendLine("<b>3. Đăng ký components trong SceneLifetimeScope.cs:</b>");
+            sb.AppendLine($"   builder.Register<{name}Logic>(Lifetime.Transient);");
+            sb.AppendLine($"   builder.Register<{name}Spawner>(Lifetime.Scoped);");
+            sb.AppendLine($"   builder.RegisterComponentInHierarchy<{name}Provider>();");
         }
-        else // Interaction
+        else if (group == "Interaction")
         {
-            sb.AppendLine($"<b>1. (Tuỳ chọn) Thêm asmdef vào Composition nếu có I{name}Service:</b>");
-            sb.AppendLine($"   → Thêm: <b>\"BillGameCore.Modules.{name}\"</b> vào BillGameCore.Composition.asmdef");
+            sb.AppendLine("<b>1. (Tuỳ chọn) Thêm asmdef vào Composition nếu có interface:</b>");
+            sb.AppendLine($"   BillGameCore.Composition.asmdef → thêm \"BillGameCore.Modules.{name}\"");
             sb.AppendLine("");
-            sb.AppendLine($"<b>2. Register trong SceneLifetimeScope.cs:</b>");
+            sb.AppendLine("<b>2. Đăng ký trong SceneLifetimeScope.cs:</b>");
             sb.AppendLine($"   builder.Register<{name}Logic>(Lifetime.Transient);");
             sb.AppendLine($"   builder.RegisterComponentInHierarchy<{name}View>();");
             sb.AppendLine("");
-            sb.AppendLine($"<b>3. (Tuỳ chọn) Register signal nếu dùng:</b>");
+            sb.AppendLine("<b>3. (Tuỳ chọn) Đăng ký signal nếu dùng:</b>");
             sb.AppendLine($"   builder.RegisterMessageBroker<{name}ActivatedSignal>(options);");
+        }
+        else // Service
+        {
+            sb.AppendLine("<b>1. Thêm asmdef vào Composition:</b>");
+            sb.AppendLine($"   BillGameCore.Composition.asmdef → thêm \"BillGameCore.Modules.{name}\"");
+            sb.AppendLine("");
+            sb.AppendLine("<b>2. Đăng ký signal trong ProjectLifetimeScope.cs:</b>");
+            sb.AppendLine($"   builder.RegisterMessageBroker<{name}ChangedSignal>(options);");
+            sb.AppendLine("");
+            sb.AppendLine("<b>3. Đăng ký service trong ProjectLifetimeScope.cs:</b>");
+            sb.AppendLine($"   builder.Register<I{name}Service, {name}Manager>(Lifetime.Singleton);");
         }
 
         sb.AppendLine("");
