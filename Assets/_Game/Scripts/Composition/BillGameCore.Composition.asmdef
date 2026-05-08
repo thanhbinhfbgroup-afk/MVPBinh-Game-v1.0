@@ -1,0 +1,18 @@
+{
+    "name": "BillGameCore.Composition",
+    "references": [
+        "BillGameCore.Interfaces",
+        "BillGameCore.Core",
+        "BillGameCore.Modules.Player",
+        "VContainer",
+        "VContainer.Unity",
+        "MessagePipe",
+        "MessagePipe.VContainer"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
