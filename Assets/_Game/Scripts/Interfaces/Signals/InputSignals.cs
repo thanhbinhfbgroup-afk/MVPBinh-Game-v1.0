@@ -18,7 +18,11 @@ namespace BillGameCore.Interfaces.Signals
             Direction = direction;
         }
     }
-
+    public struct OnMoveInputSignal
+    {
+        public UnityEngine.Vector2 Direction;
+        public OnMoveInputSignal(UnityEngine.Vector2 direction) => Direction = direction;
+    }
     public readonly struct AttackInputSignal
     {
     }

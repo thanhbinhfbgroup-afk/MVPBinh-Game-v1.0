@@ -49,3 +49,5 @@ MonoBehaviour:
   autoRun: 1
   autoInjectGameObjects:
   - {fileID: 3852667547321747321, guid: 921b13bfaf324764ab9fa51f301d8680, type: 3}
+  _playerPrefab: {fileID: 0}
+  _spawnPosition: {x: 0, y: 0, z: 0}

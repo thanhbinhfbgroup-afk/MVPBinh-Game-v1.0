@@ -1,39 +1,41 @@
 using BillGameCore.Interfaces.Signals;
-using BillGameCore.Modules.Input.Interfaces;
 using BillGameCore.Modules.Input.Providers;
+using BillGameCore.Modules.Player;
+using BillGameCore.Modules.Player.Spawners;
 using MessagePipe;
+using UnityEngine;
 using VContainer;
 using VContainer.Unity;
-using UnityEngine;
 
 public class SceneLifetimeScope : LifetimeScope
 {
+    [Header("Player Spawn")]
+    [SerializeField] private GameObject _playerPrefab;
+    [SerializeField] private Vector3 _spawnPosition = Vector3.zero;
+
     protected override void Configure(IContainerBuilder builder)
     {
-        // Dòng log này để chắc chắn hàm này có chạy
         Debug.Log($"[CHECK] Scope {gameObject.name} is running!");
 
         var options = builder.RegisterMessagePipe();
 
-
-        builder.RegisterMessageBroker<MoveInputChangedSignal>(options);
+        // Signals
+        builder.RegisterMessageBroker<OnMoveInputSignal>(options);
         builder.RegisterMessageBroker<AttackInputSignal>(options);
+        builder.RegisterMessageBroker<PlayerStateChangedSignal>(options);
 
+        // Player module
+        builder.Register<MovementLogic>(Lifetime.Scoped).AsImplementedInterfaces().AsSelf();
+        builder.Register<PlayerSpawner>(Lifetime.Scoped);
 
-        // Thử dùng Instance trực tiếp thay vì tìm trong Hierarchy để loại trừ lỗi tìm kiếm
-        var input = FindObjectOfType<InputManager>();
-        if (input != null)
-        {
+        // Data for EntryPoint
+        builder.RegisterInstance(_playerPrefab);
+        builder.RegisterInstance(_spawnPosition);
 
-            builder.RegisterComponentInHierarchy<InputManager>().AsImplementedInterfaces();
-            UnityEngine.Debug.Log("InputManager found and registered!");
-        }
-        else
-        {
-            UnityEngine.Debug.LogError("InputManager NOT FOUND in scene!");
-        }
-
+        // Runtime spawn trigger
+        builder.RegisterEntryPoint<PlayerSpawnEntryPoint>();
     }
-
 }
+
+
 

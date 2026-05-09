@@ -1,14 +1,13 @@
 {
-    "name": "BillGameCore.Composition",
+    "name": "BillGameCore.Modules.Player",
     "rootNamespace": "",
     "references": [
         "BillGameCore.Interfaces",
         "BillGameCore.Core",
-        "BillGameCore.Modules.Input",
         "VContainer",
         "MessagePipe",
         "MessagePipe.VContainer",
-        "BillGameCore.Modules.Player"
+        "UniTask"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
