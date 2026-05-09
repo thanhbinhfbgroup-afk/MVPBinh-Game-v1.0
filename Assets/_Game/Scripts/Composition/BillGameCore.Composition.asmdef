@@ -3,7 +3,6 @@
     "references": [
         "BillGameCore.Interfaces",
         "BillGameCore.Core",
-        "BillGameCore.Modules.Player",
         "VContainer",
         "VContainer.Unity",
         "MessagePipe",

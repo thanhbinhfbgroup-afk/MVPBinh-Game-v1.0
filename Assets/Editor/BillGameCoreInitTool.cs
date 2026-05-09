@@ -2,7 +2,7 @@ using UnityEditor;
 using UnityEngine;
 using System.IO;
 using System.Text;
-
+using UnityEditor.Callbacks;
 /// <summary>
 /// BillGameCore Init Tool v3.1
 /// Blueprint: Modular Architecture + VContainer + MessagePipe
@@ -13,8 +13,11 @@ using System.Text;
 ///   - Service     → Manager                            (Inventory, Economy, Save, Audio, Combat...)
 /// Asmdef: Interfaces → Core → Modules.* → Composition (Composition Root)
 /// </summary>
+
 public static class BillGameCoreInitTool
 {
+    private const string PENDING_LOG_KEY = "BillGameCore_PendingLog"; // Thêm dòng này để định danh bộ nhớ tạm
+
     private const string ROOT = "Assets/_Game";
 
     [MenuItem("BillGameCore/Initialize Project (Enterprise Standard)")]
@@ -27,7 +30,8 @@ public static class BillGameCoreInitTool
         CreateSignals();
 
         AssetDatabase.Refresh();
-        Debug.Log("<color=cyan><b>[BillGameCore v3.1]</b></color> <color=green>Khởi tạo thành công!</color>");
+        //Debug.Log("<color=cyan><b>[BillGameCore v3.1]</b></color> <color=green>Khởi tạo thành công!</color>");
+        SessionState.SetString(PENDING_LOG_KEY, "<color=cyan><b>[BillGameCore v3.1]</b></color> <color=green>Khởi tạo thành công!</color>");
     }
 
     // ─────────────────────────────────────────────
@@ -265,7 +269,7 @@ namespace BillGameCore.Modules.{name}
     {{
         [SerializeField] private Animator _animator;
 
-        // TODO: các method hiển thị — gọi từ Provider qua event/delegate
+        // TODO: các method hiển thị — gọi từ Provider qua event/delegate binh boong
     }}
 }}");
 
@@ -278,7 +282,6 @@ $@"// [MODULE: {name}]
 using VContainer;
 using UnityEngine;
 using VContainer.Unity;
-
 namespace BillGameCore.Modules.{name}
 {{
     public class {name}Spawner
@@ -325,8 +328,8 @@ namespace BillGameCore.Interfaces.Signals
 {{
     public struct {name}ActivatedSignal
     {{
-        public int ObjectId;
-        public {name}ActivatedSignal(int id) => ObjectId = id;
+         public UnityEngine.EntityId ObjectId; // int → EntityId
+        public {name}ActivatedSignal(UnityEngine.EntityId objectId) => ObjectId = objectId;
     }}
 }}");
 
@@ -373,7 +376,7 @@ namespace BillGameCore.Modules.{name}
             _publisher = publisher;
         }}
 
-        public void Interact(int objectId)
+        public void Interact(UnityEngine.EntityId objectId)
         {{
             if (IsActivated) return;
             IsActivated = true;
@@ -425,7 +428,7 @@ namespace BillGameCore.Modules.{name}
         private void OnTriggerEnter2D(Collider2D other)
         {{
             if (other.CompareTag(""Player""))
-                _logic.Interact(gameObject.GetInstanceID());
+                _logic.Interact(GetEntityId());
         }}
 
         private void HandleActivated() {{ /* TODO: trigger animation */ }}
@@ -651,7 +654,29 @@ namespace BillGameCore.Interfaces
 
         sb.AppendLine("");
         sb.AppendLine("<color=green>✓ Sau đó cập nhật Phần 12 trong CONTEXT.md</color>");
-        Debug.Log(sb.ToString());
+        //Debug.Log(sb.ToString());
+        // Sửa đoạn cuối: Thay Debug.Log bằng cửa sổ hướng dẫn
+        BillGameCoreStepsWindow.ShowWindow($"Next Steps: {group} Module '{name}'", sb.ToString());
+        // Sửa đoạn cuối: Lưu vào SessionState thay vì Debug.Log
+        SessionState.SetString(PENDING_LOG_KEY, sb.ToString());
+    }
+    // ─────────────────────────────────────────────
+    // NEXT STEPS LOGGER — Sửa để hiện log
+    // ─────────────────────────────────────────────
+    [DidReloadScripts]
+    private static void OnScriptsReloaded()
+    {
+        // Kiểm tra xem có log nào đang chờ in không
+        string pendingLog = SessionState.GetString(PENDING_LOG_KEY, "");
+
+        if (!string.IsNullOrEmpty(pendingLog))
+        {
+            // In ra Console (Lúc này "Clear on Recompile" đã chạy xong nên log sẽ không bị mất)
+            Debug.Log(pendingLog);
+
+            // Xóa log trong bộ nhớ để không bị lặp lại lần sau
+            SessionState.EraseString(PENDING_LOG_KEY);
+        }
     }
 
     // ─────────────────────────────────────────────
@@ -740,5 +765,87 @@ public class EditorInputDialog : EditorWindow
             Close();
         }
         GUILayout.EndHorizontal();
+    }
+}
+public class BillGameCoreStepsWindow : EditorWindow
+{
+    private string _steps;
+    private Vector2 _scroll;
+    private GUIStyle _richLabelStyle;
+    private GUIStyle _boxStyle;
+
+    public static void ShowWindow(string title, string content)
+    {
+        var win = GetWindow<BillGameCoreStepsWindow>(true, title, true);
+        win._steps = content;
+        win.minSize = new Vector2(500, 400);
+        win.Show();
+    }
+
+    private void OnGUI()
+    {
+        InitStyles();
+
+        // Background đậm chất Editor hiện đại
+        EditorGUILayout.BeginVertical(EditorStyles.inspectorDefaultMargins);
+
+        // Tiêu đề chính
+        EditorGUILayout.Space(10);
+        EditorGUILayout.LabelField("🚀 NEXT STEPS", EditorStyles.boldLabel);
+        EditorGUILayout.Space(5);
+
+        _scroll = EditorGUILayout.BeginScrollView(_scroll);
+
+        // Hiển thị nội dung với RichText
+        // Thay vì SelectableLabel (khó căn chỉnh), ta dùng TextArea giả lập hoặc Label có RichText
+        EditorGUILayout.BeginVertical(_boxStyle);
+
+        // Render nội dung chính
+        EditorGUILayout.LabelField(_steps, _richLabelStyle);
+
+        EditorGUILayout.EndVertical();
+
+        EditorGUILayout.EndScrollView();
+
+        // Footer với nút chức năng
+        EditorGUILayout.Space(10);
+        if (GUILayout.Button("Copy Instructions to Clipboard", GUILayout.Height(30)))
+        {
+            EditorGUIUtility.systemCopyBuffer = StripUnityTags(_steps);
+            Debug.Log("Copied to clipboard!");
+        }
+        EditorGUILayout.Space(10);
+
+        EditorGUILayout.EndVertical();
+    }
+
+    private void InitStyles()
+    {
+        if (_richLabelStyle == null)
+        {
+            _richLabelStyle = new GUIStyle(EditorStyles.label)
+            {
+                richText = true,
+                wordWrap = true,
+                fontSize = 13,
+                alignment = TextAnchor.UpperLeft
+            };
+            // Chỉnh màu text mặc định cho dễ nhìn trên nền tối/sáng 
+            _richLabelStyle.normal.textColor = EditorGUIUtility.isProSkin ? Color.white : Color.black;
+        }
+
+        if (_boxStyle == null)
+        {
+            _boxStyle = new GUIStyle("HelpBox")
+            {
+                padding = new RectOffset(15, 15, 15, 15)
+            };
+        }
+    }
+
+    // Hàm phụ để xóa tag màu khi copy ra ngoài (để code sạch)
+    private string StripUnityTags(string input)
+    {
+        return System.Text.RegularExpressions.Regex.Replace(input, "<.*?>", string.Empty);
     }
 }
