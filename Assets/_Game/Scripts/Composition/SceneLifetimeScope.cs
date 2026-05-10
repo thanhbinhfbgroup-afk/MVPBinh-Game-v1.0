@@ -21,7 +21,7 @@ public class SceneLifetimeScope : LifetimeScope
 
         // Signals
         builder.RegisterMessageBroker<OnMoveInputSignal>(options);
-        builder.RegisterMessageBroker<AttackInputSignal>(options);
+        //builder.RegisterMessageBroker<AttackInputSignal>(options);
         builder.RegisterMessageBroker<PlayerStateChangedSignal>(options);
 
         // Player module
