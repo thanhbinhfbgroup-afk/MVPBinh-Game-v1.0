@@ -26,6 +26,7 @@
   <Project Path="Unity.VisualStudio.Editor.csproj" />
   <Project Path="Unity.InputSystem.csproj" />
   <Project Path="Unity.2D.Animation.Editor.csproj" />
+  <Project Path="BillGameCore.Interfaces.csproj" />
   <Project Path="Unity.Searcher.Editor.csproj" />
   <Project Path="Unity.2D.SpriteShape.Runtime.csproj" />
   <Project Path="UnityEditor.TestRunner.csproj" />
@@ -79,14 +80,15 @@
   <Project Path="Unity.RenderPipeline.Universal.ShaderLibrary.csproj" />
   <Project Path="Assembly-CSharp-Editor.csproj" />
   <Project Path="Unity.InternalAPIEngineBridge.004.csproj" />
-  <Project Path="BillGameCore.Interfaces.csproj" />
   <Project Path="Unity.InputSystem.DocCodeSamples.csproj" />
   <Project Path="BillGameCore.Modules.Input.csproj" />
+  <Project Path="BillGameCore.Modules.Player.csproj" />
   <Project Path="Unity.RenderPipelines.Universal.Shaders.csproj" />
   <Project Path="Unity.InternalAPIEditorBridge.ShaderGraph.Editor.csproj" />
   <Project Path="Unity.VisualScripting.DocCodeExamples.csproj" />
   <Project Path="BillGameCore.Composition.csproj" />
   <Project Path="Unity.PlasticSCM.Editor.Entities.csproj" />
+  <Project Path="BillGameCore.Modules.SaveSystem.csproj" />
   <Project Path="Unity.Rendering.LightTransport.Editor.csproj" />
   <Project Path="Unity.Collections.Editor.csproj" />
   <Project Path="Unity.2D.Triangulation.Runtime.csproj" />
