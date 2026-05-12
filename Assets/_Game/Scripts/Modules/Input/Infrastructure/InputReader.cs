@@ -17,7 +17,7 @@ namespace BillGameCore.Modules.Input.Infrastructure
     {
         [Inject] private CommandBuffer _buffer;            // injected by VContainer
 
-        [SerializeField] private PlayerInput _playerInput; // assign in Inspector
+        [Inject] private PlayerInput _playerInput; 
 
         private EntityId     _controlledEntityId = EntityId.Invalid;
         private InputContext _currentContext      = InputContext.Player;

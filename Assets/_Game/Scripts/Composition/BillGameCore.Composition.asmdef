@@ -1,13 +1,18 @@
-﻿{
+{
     "name": "BillGameCore.Composition",
+    "rootNamespace": "",
     "references": [
         "BillGameCore.Core",
         "BillGameCore.SharedPorts",
         "VContainer",
-        "VContainer.Unity"
+        "Unity.InputSystem",
+        "BillGameCore.Modules.Input"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
     "autoReferenced": false,
     "defineConstraints": [],
     "versionDefines": [],
