@@ -1,8 +1,7 @@
-{
+﻿{
     "name": "BillGameCore.Editor",
     "references": [
-        "BillGameCore.Core",
-        "BillGameCore.Interfaces"
+        "BillGameCore.Core"
     ],
     "includePlatforms": ["Editor"],
     "excludePlatforms": [],

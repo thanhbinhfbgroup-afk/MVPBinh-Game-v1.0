@@ -1,0 +1,14 @@
+﻿{
+    "name": "BillGameCore.Modules.Inventory",
+    "references": [
+        "BillGameCore.Core",
+        "BillGameCore.SharedPorts",
+        "VContainer"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

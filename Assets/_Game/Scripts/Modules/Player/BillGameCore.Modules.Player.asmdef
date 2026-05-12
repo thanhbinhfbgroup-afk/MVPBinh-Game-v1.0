@@ -1,19 +1,13 @@
-{
+﻿{
     "name": "BillGameCore.Modules.Player",
-    "rootNamespace": "",
     "references": [
-        "BillGameCore.Interfaces",
         "BillGameCore.Core",
-        "VContainer",
-        "MessagePipe",
-        "MessagePipe.VContainer",
-        "UniTask"
+        "BillGameCore.SharedPorts",
+        "BillGameCore.Modules.Input",
+        "VContainer"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
-    "allowUnsafeCode": false,
-    "overrideReferences": false,
-    "precompiledReferences": [],
     "autoReferenced": false,
     "defineConstraints": [],
     "versionDefines": [],

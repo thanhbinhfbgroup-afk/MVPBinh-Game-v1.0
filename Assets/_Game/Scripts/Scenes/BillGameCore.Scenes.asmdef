@@ -1,0 +1,15 @@
+﻿{
+    "name": "BillGameCore.Scenes",
+    "references": [
+        "BillGameCore.Core",
+        "BillGameCore.SharedPorts",
+        "BillGameCore.Composition",
+        "VContainer"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

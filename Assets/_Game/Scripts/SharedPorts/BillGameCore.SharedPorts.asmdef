@@ -1,0 +1,12 @@
+﻿{
+    "name": "BillGameCore.SharedPorts",
+    "references": [
+        "BillGameCore.Core"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
