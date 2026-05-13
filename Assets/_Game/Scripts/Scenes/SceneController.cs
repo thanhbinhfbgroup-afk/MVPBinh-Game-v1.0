@@ -1,7 +1,6 @@
 ﻿using BillGameCore.Core.Rewards;
 using BillGameCore.SharedPorts.Economy;
 using UnityEngine;
-using VContainer;
 using EntityId = BillGameCore.Core.ValueObjects.EntityId;
 
 // Slice 03+: using BillGameCore.SharedPorts.Messages;
@@ -15,8 +14,13 @@ namespace BillGameCore.Scenes
     // R06: SceneController chỉ đụng interface SharedPorts, không đụng nội bộ module.
     public sealed class SceneController : MonoBehaviour
     {
-        [Inject] private IRewardGrantService _rewardGrant;
+        private IRewardGrantService _rewardGrant;
         // Slice 04: [Inject] private LootSpawner _lootSpawner;
+
+        public void SetRewardGrantService(IRewardGrantService rewardGrant)
+        {
+            _rewardGrant = rewardGrant;
+        }
 
         // FIX-10: Signature khớp với EnemyApplication.OnDied (EntityId, RewardBundle, Vector2).
         // Được gọi bởi EnemyPresenter.OnDiedCallback — wire trong GameBootstrapper sau EnemySpawner.Spawn().
@@ -26,7 +30,9 @@ namespace BillGameCore.Scenes
             // Slice 04: _lootSpawner?.Spawn(bundle, worldPosition);
         }
 
-        // Slice 02: lưu PlayerRuntime để expose IPlayerReadService vào DI sau khi spawn.
-        // public void SetPlayerRuntime(PlayerRuntime runtime) { ... }
+        public void HandlePlayerDied(EntityId entityId, RewardBundle bundle, Vector2 worldPosition)
+        {
+            Debug.Log($"[SceneController] Player died: {entityId} at {worldPosition}");
+        }
     }
 }

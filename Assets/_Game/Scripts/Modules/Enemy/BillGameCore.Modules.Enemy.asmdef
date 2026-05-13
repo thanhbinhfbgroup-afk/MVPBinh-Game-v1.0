@@ -1,11 +1,9 @@
 ﻿{
-    "name": "BillGameCore.Composition",
+    "name": "BillGameCore.Modules.Enemy",
     "references": [
         "BillGameCore.Core",
         "BillGameCore.SharedPorts",
-        "BillGameCore.Modules.Inventory",
-        "VContainer",
-        "VContainer.Unity"
+        "VContainer"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

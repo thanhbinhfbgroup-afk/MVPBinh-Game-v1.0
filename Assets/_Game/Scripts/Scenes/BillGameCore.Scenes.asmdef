@@ -4,6 +4,8 @@
         "BillGameCore.Core",
         "BillGameCore.SharedPorts",
         "BillGameCore.Composition",
+        "BillGameCore.Modules.Input",
+        "BillGameCore.Modules.Player",
         "VContainer"
     ],
     "includePlatforms": [],

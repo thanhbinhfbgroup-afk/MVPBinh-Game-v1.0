@@ -1,15 +1,16 @@
 ﻿using System;
 using BillGameCore.Core.Combat;
 using BillGameCore.Core.Rewards;
-using BillGameCore.Modules.Player.Domain;
-using BillGameCore.SharedPorts.Player;
 using EntityId = BillGameCore.Core.ValueObjects.EntityId;
+using BillGameCore.Modules.Enemy.Domain;
+using BillGameCore.SharedPorts.Player;
+using UnityEngine;
 
-namespace BillGameCore.Modules.Player.Application
+namespace BillGameCore.Modules.Enemy.Application
 {
-    // Logic use-case của Player.
+    // Logic use-case của Enemy.
     // Implement IDamageReceiver — CombatApplication gọi ReceiveDamage() qua shared contract.
-    // Implement IPlayerReadService — UI/HUD inject qua SharedPorts (không qua Modules.Player).
+    // Implement IPlayerReadService — UI/HUD inject qua SharedPorts (không qua Modules.Enemy).
     // R15: KHÔNG có MonoBehaviour, Transform, Animator, Rigidbody2D, ScriptableObject ở đây.
     // R07: KHÔNG tham chiếu trực tiếp namespace module khác — dùng SharedPorts contracts.
     //
@@ -19,20 +20,22 @@ namespace BillGameCore.Modules.Player.Application
     // FIX-11: rewardBundleFactory là Func<RewardBundle> inject vào constructor.
     //         Enemy Spawner truyền: () => new RewardBundle { Gold = def.Gold, ... }
     //         Player Spawner truyền: null (sẽ dùng bundle rỗng mặc định).
-    public sealed class PlayerApplication : IDamageReceiver, IPlayerReadService
+    public sealed class EnemyApplication : IDamageReceiver, IPlayerReadService
     {
-        private readonly PlayerDefinition        _def;
-        private readonly PlayerState             _state;
+        private readonly EnemyDefinition        _def;
+        private readonly EnemyState             _state;
         private readonly Func<RewardBundle>   _rewardBundleFactory; // FIX-11
 
-        // Application chỉ emit domain data. Vị trí thế giới thuộc Presentation/Scene layer.
-        public event Action<EntityId, RewardBundle> OnDied;
+        // FIX-02: Event mang EntityId + RewardBundle + vị trí thế giới để SceneController
+        //         gọi LootSpawner.Spawn(bundle, pos) và IRewardGrantService.Grant(bundle).
+        //         Với archetype Player, RewardBundle sẽ null/rỗng — điều đó là bình thường.
+        public event Action<EntityId, RewardBundle, Vector2> OnDied;
 
         // R18: EntityId do Spawner cung cấp — không bao giờ gọi EntityId.New() ở đây.
         public EntityId Id { get; }
 
         // FIX-11: rewardBundleFactory có thể null (Player không drop loot).
-        public PlayerApplication(EntityId id, PlayerDefinition def, PlayerState state,
+        public EnemyApplication(EntityId id, EnemyDefinition def, EnemyState state,
                               Func<RewardBundle> rewardBundleFactory = null)
         {
             Id                   = id;
@@ -74,10 +77,12 @@ namespace BillGameCore.Modules.Player.Application
             if (justDied)
             {
                 _state.IsDead = true;
+                // FIX-11: Dùng factory được inject thay vì protected virtual method.
+                //         Truyền Vector2.zero — Presenter sẽ cung cấp vị trí thực từ View.
                 var bundle = _rewardBundleFactory != null
                     ? _rewardBundleFactory.Invoke()
                     : new RewardBundle();
-                OnDied?.Invoke(Id, bundle);
+                OnDied?.Invoke(Id, bundle, Vector2.zero);
             }
 
             return new DamageResult(applied, _state.CurrentHealth, justDied);

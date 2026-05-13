@@ -1,39 +1,112 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
+using BillGameCore.Core.Inventory;
 using BillGameCore.Core.Save;
 using BillGameCore.Modules.Inventory.Domain;
 using BillGameCore.Modules.Inventory.Infrastructure.Persistence;
+using BillGameCore.SharedPorts.Inventory;
 
 namespace BillGameCore.Modules.Inventory.Application
 {
-    // System service.
-    // ADR-06: đăng ký trong ProjectLifetimeScope (Save/Inventory/Economy/Audio)
-    //         hoặc SceneLifetimeScope cho service chỉ sống trong một scene.
-    // R07: module khác inject interface SharedPorts — không bao giờ ref class này trực tiếp.
-    // R04: InventoryState được tạo ngay tại đây, không inject từ ngoài.
+    // Project-scope service. Owns InventoryState and exposes only SharedPorts contracts.
     public sealed class InventoryService
-        : ISaveSnapshotProvider<InventorySaveData>,
+        : IInventoryReadService,
+          IInventoryWriteService,
+          ISaveSnapshotProvider<InventorySaveData>,
           ISaveSnapshotConsumer<InventorySaveData>
     {
         private readonly InventoryState _state = new InventoryState();
 
-        // Thông báo cho UI Presenter cục bộ — không dùng cho cross-module broadcast (dùng MessagePipe).
         public event Action Changed;
 
-        // ── ISaveSnapshotProvider ──────────────────────────
-        public InventorySaveData CreateSnapshot()
+        public IReadOnlyList<ItemStack> GetItems() => _state.Items;
+
+        public bool HasItem(string itemId, int minAmount = 1)
         {
-            return new InventorySaveData(); // điền từ các field của _state
+            for (int i = 0; i < _state.Items.Count; i++)
+            {
+                var item = _state.Items[i];
+                if (item.ItemId == itemId && item.Amount >= minAmount)
+                    return true;
+            }
+
+            return false;
         }
 
-        // ── ISaveSnapshotConsumer ──────────────────────────
+        public bool AddItem(ItemStack stack)
+        {
+            if (string.IsNullOrWhiteSpace(stack.ItemId) || stack.Amount <= 0)
+                return false;
+
+            for (int i = 0; i < _state.Items.Count; i++)
+            {
+                var item = _state.Items[i];
+                if (item.ItemId != stack.ItemId) continue;
+
+                _state.Items[i] = new ItemStack(stack.ItemId, item.Amount + stack.Amount);
+                Changed?.Invoke();
+                return true;
+            }
+
+            _state.Items.Add(stack);
+            Changed?.Invoke();
+            return true;
+        }
+
+        public bool RemoveItem(string itemId, int amount)
+        {
+            if (string.IsNullOrWhiteSpace(itemId) || amount <= 0)
+                return false;
+
+            for (int i = 0; i < _state.Items.Count; i++)
+            {
+                var item = _state.Items[i];
+                if (item.ItemId != itemId) continue;
+                if (item.Amount < amount) return false;
+
+                int remaining = item.Amount - amount;
+                if (remaining == 0) _state.Items.RemoveAt(i);
+                else _state.Items[i] = new ItemStack(itemId, remaining);
+
+                Changed?.Invoke();
+                return true;
+            }
+
+            return false;
+        }
+
+        public InventorySaveData CreateSnapshot()
+        {
+            var items = new InventoryItemEntry[_state.Items.Count];
+            for (int i = 0; i < _state.Items.Count; i++)
+            {
+                var item = _state.Items[i];
+                items[i] = new InventoryItemEntry
+                {
+                    ItemId = item.ItemId,
+                    Amount = item.Amount,
+                };
+            }
+
+            return new InventorySaveData { Items = items };
+        }
+
         public void RestoreSnapshot(InventorySaveData snapshot)
         {
             if (snapshot == null) return;
-            // Khôi phục _state từ các field trong snapshot.
+
+            _state.Items.Clear();
+            if (snapshot.Items != null)
+            {
+                for (int i = 0; i < snapshot.Items.Length; i++)
+                {
+                    var item = snapshot.Items[i];
+                    if (item == null) continue;
+                    AddItem(new ItemStack(item.ItemId, item.Amount));
+                }
+            }
+
             Changed?.Invoke();
         }
-
-        // Thêm command/query method ở đây.
-        // Khai báo interface hẹp trong SharedPorts/ cho module khác consume (R07).
     }
 }

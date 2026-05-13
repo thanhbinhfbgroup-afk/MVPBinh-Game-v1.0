@@ -4,6 +4,13 @@
     [System.Serializable]
     public sealed class InventorySaveData
     {
-        // Mirror các field của InventoryState sang kiểu serializable.
+        public InventoryItemEntry[] Items = System.Array.Empty<InventoryItemEntry>();
+    }
+
+    [System.Serializable]
+    public sealed class InventoryItemEntry
+    {
+        public string ItemId;
+        public int    Amount;
     }
 }

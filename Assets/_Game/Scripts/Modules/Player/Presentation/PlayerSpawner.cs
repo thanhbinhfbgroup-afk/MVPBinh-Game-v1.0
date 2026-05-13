@@ -3,7 +3,6 @@ using BillGameCore.Modules.Player.Application;
 using BillGameCore.Modules.Player.Domain;
 using BillGameCore.Modules.Player.Infrastructure.Config;
 using BillGameCore.SharedPorts.Input;
-using System;
 using UnityEngine;
 using EntityId = BillGameCore.Core.ValueObjects.EntityId;
 
@@ -22,22 +21,11 @@ namespace BillGameCore.Modules.Player.Presentation
         private readonly PlayerConfig           _config;
         private readonly IInputCommandSource _inputSource;
 
-        // FIX-11: Factory tạo RewardBundle — truyền null nếu entity không drop loot (e.g. Player).
-        //         Enemy Spawner ghi đè factory này với lambda lấy loot từ EnemyDefinition.
-        private readonly Func<RewardBundle> _rewardBundleFactory;
-
-        // Constructor cho Player hoặc entity không drop loot.
         public PlayerSpawner(PlayerView prefab, PlayerConfig config, IInputCommandSource inputSource)
-            : this(prefab, config, inputSource, null) { }
-
-        // Constructor cho Enemy hoặc entity có drop loot.
-        public PlayerSpawner(PlayerView prefab, PlayerConfig config,
-                          IInputCommandSource inputSource, Func<RewardBundle> rewardBundleFactory)
         {
-            _prefab              = prefab;
-            _config              = config;
-            _inputSource         = inputSource;
-            _rewardBundleFactory = rewardBundleFactory;
+            _prefab      = prefab;
+            _config      = config;
+            _inputSource = inputSource;
         }
 
         public PlayerRuntime Spawn(Vector2 position)
@@ -46,8 +34,7 @@ namespace BillGameCore.Modules.Player.Presentation
             var def   = _config.ToDefinition();
             var state = new PlayerState();
 
-            // FIX-11: Truyền factory vào Application — không dùng protected virtual.
-            var app   = new PlayerApplication(id, def, state, _rewardBundleFactory);
+            var app   = new PlayerApplication(id, def, state);
 
             // R17: Object.Instantiate đúng ở đây vì PlayerView không có [Inject] field.
             // Nếu thêm [Inject] vào PlayerView sau này, đổi sang container.Instantiate().

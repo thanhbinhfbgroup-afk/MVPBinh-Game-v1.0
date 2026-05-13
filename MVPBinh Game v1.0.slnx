@@ -78,6 +78,7 @@
   <Project Path="Unity.VisualScripting.Shared.Editor.csproj" />
   <Project Path="Unity.2D.Aseprite.Common.csproj" />
   <Project Path="Unity.SurfaceCache.Runtime.csproj" />
+  <Project Path="BillGameCore.Modules.Enemy.csproj" />
   <Project Path="MessagePipe.Editor.csproj" />
   <Project Path="Unity.InternalAPIEngineBridge.RenderPipelines.Core.Runtime.Shared.csproj" />
   <Project Path="BillGameCore.Modules.Input.csproj" />

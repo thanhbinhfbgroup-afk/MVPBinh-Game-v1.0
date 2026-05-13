@@ -4,6 +4,7 @@
     // R04: Không vào DI scope.  R10: Không trong ScriptableObject.  R15: Thuần C#.
     public sealed class InventoryState
     {
-        // Thêm field trạng thái runtime ở đây.
+        public System.Collections.Generic.List<BillGameCore.Core.Inventory.ItemStack> Items { get; }
+            = new System.Collections.Generic.List<BillGameCore.Core.Inventory.ItemStack>();
     }
 }
