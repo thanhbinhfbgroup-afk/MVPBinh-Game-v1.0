@@ -1,7 +1,7 @@
 ﻿namespace BillGameCore.SharedPorts.Input
 {
-    // Placed in SharedPorts so consumers don't ref Modules.Input.
-    // NEVER delete or renumber existing values (replay / save compatibility).
+    // Đặt trong SharedPorts để consumer không cần ref Modules.Input.
+    // KHÔNG XÓA hoặc đánh số lại các giá trị cũ (tương thích replay/save).
     public enum CommandType
     {
         Move          = 0,

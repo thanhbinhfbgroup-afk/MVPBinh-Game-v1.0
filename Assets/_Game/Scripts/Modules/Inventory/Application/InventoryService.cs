@@ -1,39 +1,39 @@
 ﻿using System;
 using BillGameCore.Core.Save;
 using BillGameCore.Modules.Inventory.Domain;
-using BillGameCore.Modules.Inventory.Infrastructure;
+using BillGameCore.Modules.Inventory.Infrastructure.Persistence;
 
 namespace BillGameCore.Modules.Inventory.Application
 {
     // System service.
-    // ADR-06: register in ProjectLifetimeScope (Save/Inventory/Economy/Audio)
-    //         or SceneLifetimeScope for scene-only services.
-    // R07: consuming modules inject a SharedPorts interface — never this class directly.
-    // R04: InventoryState is created here, not injected from outside.
+    // ADR-06: đăng ký trong ProjectLifetimeScope (Save/Inventory/Economy/Audio)
+    //         hoặc SceneLifetimeScope cho service chỉ sống trong một scene.
+    // R07: module khác inject interface SharedPorts — không bao giờ ref class này trực tiếp.
+    // R04: InventoryState được tạo ngay tại đây, không inject từ ngoài.
     public sealed class InventoryService
         : ISaveSnapshotProvider<InventorySaveData>,
           ISaveSnapshotConsumer<InventorySaveData>
     {
         private readonly InventoryState _state = new InventoryState();
 
-        // Notify local UI presenters — not for cross-module broadcast (use MessagePipe for that).
+        // Thông báo cho UI Presenter cục bộ — không dùng cho cross-module broadcast (dùng MessagePipe).
         public event Action Changed;
 
         // ── ISaveSnapshotProvider ──────────────────────────
         public InventorySaveData CreateSnapshot()
         {
-            return new InventorySaveData(); // populate from _state fields
+            return new InventorySaveData(); // điền từ các field của _state
         }
 
         // ── ISaveSnapshotConsumer ──────────────────────────
         public void RestoreSnapshot(InventorySaveData snapshot)
         {
             if (snapshot == null) return;
-            // Restore _state from snapshot.
+            // Khôi phục _state từ các field trong snapshot.
             Changed?.Invoke();
         }
 
-        // Add command/query methods here.
-        // Expose narrow interfaces in SharedPorts/ for other modules to consume.
+        // Thêm command/query method ở đây.
+        // Khai báo interface hẹp trong SharedPorts/ cho module khác consume (R07).
     }
 }

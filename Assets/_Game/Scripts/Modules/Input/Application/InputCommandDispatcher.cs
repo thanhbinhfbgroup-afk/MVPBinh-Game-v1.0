@@ -3,9 +3,9 @@ using BillGameCore.SharedPorts.Input;
 
 namespace BillGameCore.Modules.Input.Application
 {
-    // Registered in SceneLifetimeScope as IInputCommandSource.
-    // Thin adapter: CommandBuffer → IInputCommandSource.
-    // Consumer Presenters inject IInputCommandSource — never know InputReader exists.
+    // Đăng ký trong SceneLifetimeScope với type IInputCommandSource.
+    // Adapter mỏng: CommandBuffer → IInputCommandSource.
+    // Consumer Presenter inject IInputCommandSource — không biết InputReader tồn tại.
     public sealed class InputCommandDispatcher : IInputCommandSource
     {
         private readonly CommandBuffer _buffer;

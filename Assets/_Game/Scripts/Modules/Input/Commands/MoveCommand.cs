@@ -3,7 +3,8 @@ using BillGameCore.SharedPorts.Input;
 
 namespace BillGameCore.Modules.Input.Commands
 {
-    public sealed class MoveCommand : ICommand
+    // Implement cả IMoveCommand để Entity Presenter đọc DirX/Y mà không ref module này (FIX-03).
+    public sealed class MoveCommand : IMoveCommand
     {
         public MoveCommand(EntityId sourceId, float dirX, float dirY, float timestamp)
         {

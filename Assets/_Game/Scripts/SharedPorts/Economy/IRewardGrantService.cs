@@ -2,7 +2,7 @@
 
 namespace BillGameCore.SharedPorts.Economy
 {
-    // Called by SceneController after enemy dies — grants exp+gold immediately (no loot object).
+    // Gọi bởi SceneController sau khi enemy chết — cộng exp+gold ngay lập tức.
     public interface IRewardGrantService
     {
         void Grant(RewardBundle bundle);

@@ -1,8 +1,8 @@
 ﻿namespace BillGameCore.Core.Combat
 {
-    // Method name is ReceiveDamage — NEVER rename (CONTEXT contract).
-    // Implemented by: EnemyApplication, PlayerApplication.
-    // Called by: CombatApplication ONLY — never from Presenter or View.
+    // Tên method là ReceiveDamage — KHÔNG ĐƯỢC đổi tên (hợp đồng CONTEXT).
+    // Implement bởi: EnemyApplication, PlayerApplication.
+    // Gọi bởi: CHỈ CombatApplication — không gọi từ Presenter hay View.
     public interface IDamageReceiver
     {
         DamageResult ReceiveDamage(DamageInfo damage);

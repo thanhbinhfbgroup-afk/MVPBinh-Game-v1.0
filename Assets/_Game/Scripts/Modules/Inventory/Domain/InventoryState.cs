@@ -1,9 +1,9 @@
 ﻿namespace BillGameCore.Modules.Inventory.Domain
 {
-    // Runtime state owned exclusively by InventoryService.
-    // R04: Never in DI scope.  R10: Not in ScriptableObject.  R15: Pure C#.
+    // Trạng thái runtime được sở hữu độc quyền bởi InventoryService.
+    // R04: Không vào DI scope.  R10: Không trong ScriptableObject.  R15: Thuần C#.
     public sealed class InventoryState
     {
-        // Add runtime state fields here.
+        // Thêm field trạng thái runtime ở đây.
     }
 }

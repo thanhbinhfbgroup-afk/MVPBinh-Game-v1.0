@@ -3,7 +3,8 @@ using BillGameCore.SharedPorts.Input;
 
 namespace BillGameCore.Modules.Input.Commands
 {
-    public sealed class AttackCommand : ICommand
+    // Implement cả IAttackCommand để Entity Presenter đọc IsHeld/HeldDuration (FIX-03).
+    public sealed class AttackCommand : IAttackCommand
     {
         public AttackCommand(EntityId sourceId, float timestamp,
                              bool isHeld = false, float heldDuration = 0f)
@@ -17,7 +18,7 @@ namespace BillGameCore.Modules.Input.Commands
         public EntityId    SourceId     { get; }
         public CommandType Type         => CommandType.Attack;
         public float       Timestamp    { get; }
-        public bool        IsHeld       { get; }   // true while button held
-        public float       HeldDuration { get; }   // seconds held so far
+        public bool        IsHeld       { get; }   // true khi đang giữ nút
+        public float       HeldDuration { get; }   // số giây đã giữ
     }
 }

@@ -1,8 +1,8 @@
 ﻿namespace BillGameCore.SharedPorts.Input
 {
-    // Consumed by: PlayerPresenter, AI controllers.
-    // Implemented by: InputCommandDispatcher (Modules.Input).
-    // Registered in SceneLifetimeScope as IInputCommandSource.
+    // Tiêu thụ bởi: PlayerPresenter, AI controller.
+    // Implement bởi: InputCommandDispatcher (Modules.Input).
+    // Đăng ký trong SceneLifetimeScope với type IInputCommandSource.
     public interface IInputCommandSource
     {
         bool TryDequeue(out ICommand command);

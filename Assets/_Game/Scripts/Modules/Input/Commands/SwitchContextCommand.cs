@@ -12,9 +12,9 @@ namespace BillGameCore.Modules.Input.Commands
             Timestamp     = timestamp;
         }
 
-        public EntityId     SourceId      { get; }
-        public CommandType  Type          => CommandType.SwitchContext;
-        public float        Timestamp     { get; }
-        public InputContext  TargetContext { get; }
+        public EntityId    SourceId      { get; }
+        public CommandType Type          => CommandType.SwitchContext;
+        public float       Timestamp     { get; }
+        public InputContext TargetContext { get; }
     }
 }

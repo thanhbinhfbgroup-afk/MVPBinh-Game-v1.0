@@ -2,13 +2,13 @@
 
 namespace BillGameCore.SharedPorts.Input
 {
-    // Declared in SharedPorts so consumers need only ref SharedPorts.
-    // Concrete classes (MoveCommand, AttackCommand ...) live in Modules.Input.Commands
-    // and implement this interface.
+    // Khai báo trong SharedPorts để consumer chỉ cần ref SharedPorts.
+    // Các class cụ thể (MoveCommand, AttackCommand ...) nằm trong
+    // Modules.Input.Commands và implement interface này.
     public interface ICommand
     {
-        EntityId    SourceId  { get; }   // who produced this command (ADR-02 identity)
+        EntityId    SourceId  { get; }   // ai tạo ra command này (ADR-02 identity)
         CommandType Type      { get; }
-        float       Timestamp { get; }   // Time.time when created
+        float       Timestamp { get; }   // Time.time lúc tạo
     }
 }

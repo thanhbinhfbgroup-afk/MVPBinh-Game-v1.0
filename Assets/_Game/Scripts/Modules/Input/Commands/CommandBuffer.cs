@@ -3,8 +3,8 @@ using BillGameCore.SharedPorts.Input;
 
 namespace BillGameCore.Modules.Input.Commands
 {
-    // Thread-safe FIFO.
-    // R16: Only InputReader (Infrastructure) is allowed to call Enqueue().
+    // FIFO thread-safe.
+    // R16: Chỉ InputReader (Infrastructure) được phép gọi Enqueue().
     public sealed class CommandBuffer
     {
         private readonly Queue<ICommand> _queue   = new Queue<ICommand>();
@@ -13,12 +13,12 @@ namespace BillGameCore.Modules.Input.Commands
 
         public CommandBuffer(int maxSize = 32) { _maxSize = maxSize; }
 
-        // R16: called ONLY from InputReader.
+        // R16: CHỈ được gọi từ InputReader.
         public void Enqueue(ICommand command)
         {
             lock (_lock)
             {
-                if (_queue.Count >= _maxSize) _queue.Dequeue(); // drop oldest on overflow
+                if (_queue.Count >= _maxSize) _queue.Dequeue(); // bỏ cũ nhất khi tràn
                 _queue.Enqueue(command);
             }
         }
@@ -35,7 +35,7 @@ namespace BillGameCore.Modules.Input.Commands
 
         public bool HasCommands { get { lock (_lock) return _queue.Count > 0; } }
 
-        // Called by InputReader.SwitchContext() to flush stale commands.
+        // Gọi bởi InputReader.SwitchContext() để xả command cũ.
         public void Clear() { lock (_lock) _queue.Clear(); }
     }
 }

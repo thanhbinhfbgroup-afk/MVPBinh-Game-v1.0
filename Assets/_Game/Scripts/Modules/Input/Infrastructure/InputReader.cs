@@ -1,5 +1,4 @@
-﻿
-using BillGameCore.Modules.Input.Commands;
+﻿using BillGameCore.Modules.Input.Commands;
 using BillGameCore.Modules.Input.Context;
 using BillGameCore.SharedPorts.Input;
 using UnityEngine;
@@ -9,30 +8,30 @@ using EntityId = BillGameCore.Core.ValueObjects.EntityId;
 
 namespace BillGameCore.Modules.Input.Infrastructure
 {
-    // MonoBehaviour — translates New Input System events into ICommand objects.
-    // R03: No business logic — only raw-input → Command translation.
-    // R16: This is the ONLY class allowed to call CommandBuffer.Enqueue().
-    // R17: Registered via builder.RegisterComponent<InputReader>() — VContainer resolves [Inject].
+    // MonoBehaviour — dịch event New Input System thành ICommand object.
+    // R03: Không có business logic — chỉ raw-input → Command translation.
+    // R16: Đây là class DUY NHẤT được phép gọi CommandBuffer.Enqueue().
+    // R17: Đăng ký qua builder.RegisterComponent<InputReader>() — VContainer resolve [Inject].
     public sealed class InputReader : MonoBehaviour
     {
-        [Inject] private CommandBuffer _buffer;            // injected by VContainer
+        [Inject] private CommandBuffer _buffer; // được inject bởi VContainer
 
-        [Inject] private PlayerInput _playerInput; 
+        [SerializeField] private PlayerInput _playerInput; // gắn trong Inspector
 
         private EntityId     _controlledEntityId = EntityId.Invalid;
         private InputContext _currentContext      = InputContext.Player;
 
-        // Hold-state for Attack
+        // Trạng thái giữ nút Attack
         private bool  _attackHeld;
         private float _attackHeldStart;
 
-        // Called by GameBootstrapper after PlayerSpawner.Spawn() returns a Runtime.
+        // Gọi bởi GameBootstrapper sau khi PlayerSpawner.Spawn() trả về Runtime.
         public void SetControlledEntity(EntityId id) => _controlledEntityId = id;
 
         public void SwitchContext(InputContext context)
         {
             _currentContext = context;
-            _buffer.Clear(); // flush stale commands (CONTEXT 14E)
+            _buffer.Clear(); // xả command cũ (CONTEXT §14E)
             _playerInput.SwitchCurrentActionMap(context switch
             {
                 InputContext.Player  => PlayerInputContext.ActionMapName,
@@ -49,15 +48,18 @@ namespace BillGameCore.Modules.Input.Infrastructure
             {
                 case InputContext.Player:  ReadPlayerMap();  break;
                 case InputContext.Vehicle: ReadVehicleMap(); break;
+                // UI do Unity EventSystem xử lý — không cần đọc thủ công
             }
         }
 
-        // R16: All Enqueue calls are inside this file only.
+        // R16: Tất cả lệnh Enqueue chỉ nằm trong file này.
         private void ReadPlayerMap()
         {
+            // Di chuyển — đọc mỗi frame (liên tục)
             var mv = _playerInput.actions["Player/Move"].ReadValue<Vector2>();
             _buffer.Enqueue(new MoveCommand(_controlledEntityId, mv.x, mv.y, Time.time));
 
+            // Tấn công — theo dõi giữ nút
             var atk = _playerInput.actions["Player/Attack"];
             if (atk.WasPressedThisFrame()) { _attackHeld = true; _attackHeldStart = Time.time; }
             if (_attackHeld)
@@ -66,13 +68,14 @@ namespace BillGameCore.Modules.Input.Infrastructure
                                                   heldDuration: Time.time - _attackHeldStart));
             if (atk.WasReleasedThisFrame()) _attackHeld = false;
 
+            // Tương tác — một lần mỗi lần nhấn
             if (_playerInput.actions["Player/Interact"].WasPressedThisFrame())
                 _buffer.Enqueue(new InteractCommand(_controlledEntityId, Time.time));
         }
 
         private void ReadVehicleMap()
         {
-            // Implement Vehicle action reads here when Vehicle slice is built.
+            // Thêm đọc Vehicle action ở đây khi slice Vehicle được build.
         }
     }
 }

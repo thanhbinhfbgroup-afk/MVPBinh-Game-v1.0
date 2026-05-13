@@ -3,7 +3,6 @@
     "references": [
         "BillGameCore.Core",
         "BillGameCore.SharedPorts",
-        "BillGameCore.Modules.Input",
         "VContainer"
     ],
     "includePlatforms": [],

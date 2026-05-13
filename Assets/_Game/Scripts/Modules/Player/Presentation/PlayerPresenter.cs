@@ -1,36 +1,52 @@
 ﻿using System;
 using BillGameCore.Core.Interaction;
+using BillGameCore.Core.Rewards;
 using EntityId = BillGameCore.Core.ValueObjects.EntityId;
 using BillGameCore.Modules.Player.Application;
-using BillGameCore.Modules.Input.Commands;
+using BillGameCore.SharedPorts.Combat;
 using BillGameCore.SharedPorts.Input;
 using UnityEngine;
 
+
 namespace BillGameCore.Modules.Player.Presentation
 {
-    // Bridges IInputCommandSource → PlayerApplication → PlayerView each frame.
-    // Constructed by PlayerSpawner — NOT by DI container (R04).
+    // Bridge IInputCommandSource → PlayerApplication → PlayerView mỗi frame.
+    // Được tạo bởi PlayerSpawner — KHÔNG qua DI container (R04).
+    //
+    // FIX-03: Dùng CommandType enum + interface IMoveCommand/IAttackCommand (SharedPorts).
+    //         KHÔNG tham chiếu BillGameCore.Modules.Input.Commands namespace (R06/R07).
+    // FIX-05: Signature OnDiedCallback khớp với Application.OnDied (§14C).
     public sealed class PlayerPresenter : IDisposable
     {
-        private readonly PlayerApplication  _app;
-        private readonly PlayerView         _view;
+        private readonly PlayerApplication      _app;
+        private readonly PlayerView             _view;
         private readonly IInputCommandSource _input;
+        private readonly ICombatService      _combat; // null cho đến khi Slice 03 được merge
 
         private bool  _deathPlayed;
         private float _lastDirX, _lastDirY;
+        private bool  _pendingInteract; // FIX-09
 
-        // Wired by SceneController so Presenter has no knowledge of LootSpawner etc.
-        public Action<EntityId> OnDiedCallback;
+        // FIX-05: Callback mang (EntityId, RewardBundle, Vector2) khớp với
+        //         EnemyApplication.OnDied và SceneController.HandleEnemyDied.
+        public Action<EntityId, RewardBundle, Vector2> OnDiedCallback;
 
+        // Constructor khi ICombatService chưa có (Slice 01-02).
         public PlayerPresenter(PlayerApplication app, PlayerView view, IInputCommandSource input)
+            : this(app, view, input, null) { }
+
+        // Constructor từ Slice 03 trở đi khi ICombatService đã có.
+        public PlayerPresenter(PlayerApplication app, PlayerView view,
+                            IInputCommandSource input, ICombatService combat)
         {
-            _app   = app;
-            _view  = view;
-            _input = input;
+            _app    = app;
+            _view   = view;
+            _input  = input;
+            _combat = combat;
             _app.OnDied += HandleDied;
         }
 
-        // Called from PlayerView.Update() — not from scene code directly.
+        // Gọi từ PlayerView.Update() — không gọi trực tiếp từ scene code.
         public void OnUpdate(float deltaTime)
         {
             if (_app.IsDead)
@@ -39,19 +55,30 @@ namespace BillGameCore.Modules.Player.Presentation
                 return;
             }
 
+            // FIX-03: Chỉ dùng CommandType enum và cast sang SharedPorts interface.
+            //         KHÔNG dùng kiểu MoveCommand/AttackCommand cụ thể (R06/R07).
             while (_input.TryDequeue(out ICommand cmd))
             {
-                switch (cmd)
+                switch (cmd.Type)
                 {
-                    case MoveCommand mv:
-                        _lastDirX = mv.DirX;
-                        _lastDirY = mv.DirY;
+                    case CommandType.Move:
+                        // Cast sang IMoveCommand (SharedPorts) để đọc DirX/Y (FIX-03).
+                        if (cmd is IMoveCommand mv)
+                        {
+                            _lastDirX = mv.DirX;
+                            _lastDirY = mv.DirY;
+                        }
                         break;
-                    case AttackCommand _:
-                        // TODO (Slice 03): call ICombatService.RequestAttack()
+
+                    case CommandType.Attack:
+                        // TODO Slice 03: gọi _combat?.RequestAttack(...)
+                        // if (cmd is IAttackCommand atk) { ... }
                         break;
-                    case InteractCommand _:
-                        // Handled in OnTriggerEnter2D
+
+                    case CommandType.Interact:
+                        // FIX-09: Đặt flag, thực hiện IInteractable call trong OnTriggerEnter2D
+                        //         vì cần collider reference mới có ở đó.
+                        _pendingInteract = true;
                         break;
                 }
             }
@@ -60,12 +87,16 @@ namespace BillGameCore.Modules.Player.Presentation
             _view.UpdateMoveAnimation(_lastDirX, _lastDirY);
         }
 
-        // Called from PlayerView.FixedUpdate() — physics write here, not in Update.
+        // Gọi từ PlayerView.FixedUpdate() — write physics ở đây, không trong Update.
         public void OnFixedUpdate() => _view.SetVelocity(_app.VelocityX, _app.VelocityY);
 
-        // Called from PlayerView.OnTriggerEnter2D() — R03 forward pattern.
+        // Gọi từ PlayerView.OnTriggerEnter2D() — pattern forward R03.
+        // PlayerPresenter gọi GetComponent<IInteractable>() — không biết kiểu Binder (R07).
         public void OnTriggerEnter2D(Collider2D col)
         {
+            // FIX-09: Chỉ thực hiện interact nếu có pending flag từ InteractCommand.
+            if (!_pendingInteract) return;
+            _pendingInteract = false;
             var interactable = col.GetComponent<IInteractable>();
             if (interactable != null && interactable.CanInteract())
                 interactable.Interact();
@@ -73,6 +104,11 @@ namespace BillGameCore.Modules.Player.Presentation
 
         public void Dispose() => _app.OnDied -= HandleDied;
 
-        private void HandleDied(EntityId id) => OnDiedCallback?.Invoke(id);
+        // FIX-05: Lấy vị trí thực từ View (transform) thay vì Vector2.zero từ Application.
+        private void HandleDied(EntityId id, RewardBundle bundle, Vector2 _)
+        {
+            var worldPos = _view != null ? _view.WorldPosition : Vector2.zero;
+            OnDiedCallback?.Invoke(id, bundle, worldPos);
+        }
     }
 }

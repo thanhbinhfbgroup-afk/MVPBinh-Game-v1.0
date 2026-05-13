@@ -1,8 +1,38 @@
 // ============================================================
-//  BillGameCoreInitTool.cs  —  v2.0
-//  Aligned 1-to-1 with CONTEXT_v2_0.md
+//  BillGameCoreInitTool.cs  —  v3.0
+//  Căn chỉnh 1-1 với CONTEXT_v2_0.md
 //
-//  Menu paths
+//  DANH SÁCH SỬA LỖI so với v2.0
+//  ──────────────────────────────────────────────────────────
+//  FIX-01  EntityApplication giờ implement IPlayerReadService
+//          (expose qua SharedPorts.Player) cho archetype Player.
+//          Archetype Enemy chỉ giữ IDamageReceiver — IPlayerReadService
+//          là đặc thù Player theo Context §8.
+//  FIX-02  Signature event OnDied đổi từ Action<EntityId>
+//          thành Action<EntityId, RewardBundle, Vector2> để
+//          SceneController nhận đủ bundle + vị trí thế giới (Context §14C).
+//  FIX-03  {n}Presenter không còn tham chiếu namespace
+//          Modules.Input.Commands. Dispatch command thực hiện qua
+//          enum CommandType + interface ICommand trong SharedPorts (R06/R07).
+//  FIX-04  Asmdef của {n}Spawner không còn tham chiếu BillGameCore.Modules.Input.
+//          IInputCommandSource nằm trong SharedPorts — ref đó là đủ (R06/R07).
+//  FIX-05  Signature OnDiedCallback của {n}Presenter sửa đúng theo
+//          Application.OnDied (EntityId, RewardBundle, Vector2).
+//  FIX-06  Template PlayerApplication giờ implement rõ ràng
+//          IPlayerReadService và expose MaxHealth từ Definition.
+//  FIX-07  IPlayerReadService.MaxHealth lấy từ Definition
+//          (config bất biến) thay vì State — đúng theo Context §8.
+//  FIX-08  Using-directive namespace Infrastructure.Config của {n}Spawner sửa đúng.
+//  FIX-09  Xử lý InteractCommand chuyển vào vòng lặp command queue
+//          (nhất quán với luồng Context §14D).
+//  FIX-10  Signature SceneController.HandleEnemyDied sửa đúng thành
+//          (EntityId, RewardBundle, Vector2) khớp contract OnDied mới.
+//  FIX-11  Sửa lỗi compile: BuildRewardBundle() trong {n}Application
+//          đổi từ "protected virtual" (không hợp lệ trên sealed class)
+//          sang Func<RewardBundle> được inject vào constructor, cho phép
+//          Enemy truyền lambda lấy loot từ EnemyDefinition.
+//
+//  ĐƯỜNG DẪN MENU
 //  ──────────────────────────────────────────────────────────
 //  BillGameCore / Initialize Project Structure
 //  BillGameCore / New Module / Input  (Full Command Pattern)
@@ -11,18 +41,18 @@
 //  BillGameCore / New Module / System (Inventory, Save …)
 //  BillGameCore / New Module / Add Interaction Type to Group
 //
-//  Architecture contract (CONTEXT_v2_0.md — abridged)
+//  HỢP ĐỒNG KIẾN TRÚC (CONTEXT_v2_0.md — tóm tắt)
 //  ──────────────────────────────────────────────────────────
-//  Core         – pure C# value-types & interfaces, no Unity, no logic
-//  SharedPorts  – narrow interfaces only; refs Core only; NO module refs
-//  Modules.*    – vertical slices; refs Core + SharedPorts only (cross-asmdef)
-//  Composition  – integrator-owned; refs everything; wires DI scopes
-//  Scenes       – SceneController mediator
+//  Core         – kiểu giá trị & interface thuần C#, không Unity, không logic
+//  SharedPorts  – chỉ interface hẹp; chỉ ref Core; KHÔNG ref module
+//  Modules.*    – vertical slice; chỉ ref Core + SharedPorts (cross-asmdef)
+//  Composition  – thuộc integrator; ref mọi thứ; wire DI scope
+//  Scenes       – SceneController làm mediator
 //
-//  Asmdef grouping (ADR-05)
+//  NHÓM ASMDEF (ADR-05)
 //  ──────────────────────────────────────────────────────────
 //  BillGameCore.Modules.Input            Input (Command Pattern)
-//  BillGameCore.Modules.Player           Player slice
+//  BillGameCore.Modules.Player           Slice Player
 //  BillGameCore.Modules.CombatGroup      Combat + Projectile
 //  BillGameCore.Modules.EnemyGroup       Enemy + Loot
 //  BillGameCore.Modules.InventoryGroup   Inventory + Economy
@@ -31,17 +61,18 @@
 //  BillGameCore.Modules.Audio            Audio
 //  BillGameCore.Modules.UI               HUD + InventoryPanel
 //
-//  Key rules enforced by generated code
+//  QUY TẮC QUAN TRỌNG ĐƯỢC ÁP DỤNG TRONG CODE SINH RA
 //  ──────────────────────────────────────────────────────────
-//  R03  MonoBehaviour callbacks → forward to Presenter only
-//  R04  Entity State/App/Presenter/Runtime NEVER in DI scope
-//  R07  Cross-module only via SharedPorts or MessagePipe (Slice 03+)
-//  R09  SharedPorts refs Core only — never a Module asmdef
-//  R10  ScriptableObject = config data only
-//  R15  Domain & Application = pure C#, no UnityEngine types
-//  R16  CommandBuffer.Enqueue only from Infrastructure (InputReader)
-//  R17  Prefabs needing [Inject] → container.Instantiate()
-//  R18  EntityId.New() only in Spawner
+//  R03  MonoBehaviour callback → chỉ forward sang Presenter
+//  R04  State/App/Presenter/Runtime của entity KHÔNG BAO GIỜ vào DI scope
+//  R06  Không tham chiếu trực tiếp namespace nội bộ module khác
+//  R07  Cross-module chỉ qua SharedPorts hoặc MessagePipe (từ Slice 03)
+//  R09  SharedPorts chỉ ref Core — không bao giờ ref asmdef Module
+//  R10  ScriptableObject = chỉ chứa config data
+//  R15  Domain & Application = thuần C#, không UnityEngine types
+//  R16  CommandBuffer.Enqueue chỉ từ Infrastructure (InputReader)
+//  R17  Prefab cần [Inject] → dùng container.Instantiate()
+//  R18  EntityId.New() chỉ trong Spawner
 // ============================================================
 
 using System.IO;
@@ -64,13 +95,13 @@ public static class BillGameCoreInitTool
     {
         CreateBaseDirectories();
         WriteAllCoreFiles();
-        WriteAllSharedPortsFiles();
+        WriteAllSharedPortsFiles();   // bao gồm cả WriteCommandDataInterfaces()
         WriteAllCompositionFiles();
         WriteScenesFile();
         WriteAllAsmdefs();
         AssetDatabase.Refresh();
-        QueueLog("<color=cyan><b>[BillGameCore v2.0]</b></color> <color=green>Foundation scaffold done. " +
-                 "Open CONTEXT_v2_0.md → Phase 0 checklist before starting any feature slice.</color>");
+        QueueLog("<color=cyan><b>[BillGameCore v3.0]</b></color> <color=green>Scaffold foundation xong. " +
+                 "Mở CONTEXT_v2_0.md → checklist Phase 0 trước khi bắt đầu bất kỳ slice nào.</color>");
     }
 
     [MenuItem("BillGameCore/New Module/Input  (Full Command Pattern)")]
@@ -78,59 +109,55 @@ public static class BillGameCoreInitTool
     {
         CreateInputModule();
         AssetDatabase.Refresh();
-        //StepsWindow.Show("Input Module — Integration Steps", BuildInputSteps());
     }
 
     [MenuItem("BillGameCore/New Module/Entity  (Player, Enemy, Projectile ...)")]
     public static void NewEntityModule()
     {
-        string name = InputDialog.Show("New Entity Module",
-            "Module name  (e.g. Player | Enemy | Projectile):", "Player");
+        string name = InputDialog.Show("Module Entity Mới",
+            "Tên module  (ví dụ: Player | Enemy | Projectile):", "Player");
         name = Normalize(name);
         if (!ValidateName(name)) return;
         CreateEntityModule(name);
         AssetDatabase.Refresh();
-        //StepsWindow.Show($"Entity '{name}' — Integration Steps", BuildEntitySteps(name));
     }
 
     [MenuItem("BillGameCore/New Module/Interaction  (Chest, Door, HealPoint, Trap ...)")]
     public static void NewInteractionModule()
     {
-        string name = InputDialog.Show("New Interaction Module",
-            "First interaction type  (e.g. Chest | Door | HealPoint):", "Chest");
+        string name = InputDialog.Show("Module Interaction Mới",
+            "Tên loại interaction đầu tiên  (ví dụ: Chest | Door | HealPoint):", "Chest");
         name = Normalize(name);
         if (!ValidateName(name)) return;
         CreateInteractionGroupModule(name);
         AssetDatabase.Refresh();
-        //StepsWindow.Show($"InteractionGroup '{name}' — Integration Steps", BuildInteractionSteps(name));
     }
 
     [MenuItem("BillGameCore/New Module/Add Interaction Type to Group")]
     public static void AddInteractionType()
     {
-        string name = InputDialog.Show("Add Interaction Type",
-            "Type name to add  (e.g. Door | HealPoint | Trap):", "Door");
+        string name = InputDialog.Show("Thêm Loại Interaction",
+            "Tên loại cần thêm  (ví dụ: Door | HealPoint | Trap):", "Door");
         name = Normalize(name);
         if (!ValidateName(name)) return;
         CreateInteractionType(name);
         AssetDatabase.Refresh();
-        Debug.Log($"<color=cyan>[BillGameCore]</color> Added interaction type '{name}' to InteractionGroup.");
+        Debug.Log($"<color=cyan>[BillGameCore]</color> Đã thêm loại interaction '{name}' vào InteractionGroup.");
     }
 
     [MenuItem("BillGameCore/New Module/System  (Inventory, Save, Audio ...)")]
     public static void NewSystemModule()
     {
-        string name = InputDialog.Show("New System Module",
-            "Module name  (e.g. Inventory | Economy | Audio | Save):", "Inventory");
+        string name = InputDialog.Show("Module System Mới",
+            "Tên module  (ví dụ: Inventory | Economy | Audio | Save):", "Inventory");
         name = Normalize(name);
         if (!ValidateName(name)) return;
         CreateSystemModule(name);
         AssetDatabase.Refresh();
-        //StepsWindow.Show($"System '{name}' — Integration Steps", BuildSystemSteps(name));
     }
 
     // ═══════════════════════════════════════════════════════
-    //  FOUNDATION — directories
+    //  FOUNDATION — tạo thư mục gốc
     // ═══════════════════════════════════════════════════════
 
     static void CreateBaseDirectories()
@@ -161,7 +188,7 @@ public static class BillGameCoreInitTool
     }
 
     // ═══════════════════════════════════════════════════════
-    //  CORE FILES  (pure C# — no UnityEngine, no logic)
+    //  CORE FILES  (thuần C# — không UnityEngine, không logic)
     // ═══════════════════════════════════════════════════════
 
     static void WriteAllCoreFiles()
@@ -169,13 +196,14 @@ public static class BillGameCoreInitTool
         Write("Scripts/Core/ValueObjects/EntityId.cs",
 @"namespace BillGameCore.Core.ValueObjects
 {
-    // ADR-04: Guid — unique, no static counter, safe for parallel spawn.
-    // R18: EntityId.New() called ONLY from Spawner classes.
+    // ADR-04: Dùng Guid — duy nhất tuyệt đối, không cần static counter,
+    //         an toàn khi spawn song song.
+    // R18: EntityId.New() CHỈ được gọi từ class Spawner.
     public readonly struct EntityId : System.IEquatable<EntityId>
     {
         public static readonly EntityId Invalid = new EntityId(System.Guid.Empty);
 
-        /// <summary>R18: call only from Spawner.Spawn().</summary>
+        /// <summary>R18: chỉ gọi từ Spawner.Spawn().</summary>
         public static EntityId New() => new EntityId(System.Guid.NewGuid());
 
         private EntityId(System.Guid value) { Value = value; }
@@ -183,10 +211,10 @@ public static class BillGameCoreInitTool
         public System.Guid Value   { get; }
         public bool        IsValid => Value != System.Guid.Empty;
 
-        public bool   Equals(EntityId other)        => Value == other.Value;
-        public override bool Equals(object obj)     => obj is EntityId e && Equals(e);
-        public override int  GetHashCode()          => Value.GetHashCode();
-        public override string ToString()           => Value.ToString(""N"").Substring(0, 8);
+        public bool   Equals(EntityId other)    => Value == other.Value;
+        public override bool Equals(object obj) => obj is EntityId e && Equals(e);
+        public override int  GetHashCode()      => Value.GetHashCode();
+        public override string ToString()       => Value.ToString(""N"").Substring(0, 8);
 
         public static bool operator ==(EntityId a, EntityId b) =>  a.Equals(b);
         public static bool operator !=(EntityId a, EntityId b) => !a.Equals(b);
@@ -198,8 +226,8 @@ public static class BillGameCoreInitTool
 
 namespace BillGameCore.Core.Combat
 {
-    // Built by CombatApplication. Passed to IDamageReceiver.ReceiveDamage().
-    // Pure C# — NO UnityEngine references allowed in Core.
+    // Được tạo bởi CombatApplication. Truyền vào IDamageReceiver.ReceiveDamage().
+    // Thuần C# — KHÔNG có UnityEngine reference trong Core.
     public readonly struct DamageInfo
     {
         public DamageInfo(float amount, EntityId sourceId, bool isCritical = false)
@@ -218,6 +246,7 @@ namespace BillGameCore.Core.Combat
         Write("Scripts/Core/Combat/DamageResult.cs",
 @"namespace BillGameCore.Core.Combat
 {
+    // Kết quả trả về sau khi xử lý damage.
     public readonly struct DamageResult
     {
         public DamageResult(float appliedDamage, float remainingHealth, bool justDied)
@@ -236,9 +265,9 @@ namespace BillGameCore.Core.Combat
         Write("Scripts/Core/Combat/IDamageReceiver.cs",
 @"namespace BillGameCore.Core.Combat
 {
-    // Method name is ReceiveDamage — NEVER rename (CONTEXT contract).
-    // Implemented by: EnemyApplication, PlayerApplication.
-    // Called by: CombatApplication ONLY — never from Presenter or View.
+    // Tên method là ReceiveDamage — KHÔNG ĐƯỢC đổi tên (hợp đồng CONTEXT).
+    // Implement bởi: EnemyApplication, PlayerApplication.
+    // Gọi bởi: CHỈ CombatApplication — không gọi từ Presenter hay View.
     public interface IDamageReceiver
     {
         DamageResult ReceiveDamage(DamageInfo damage);
@@ -248,9 +277,9 @@ namespace BillGameCore.Core.Combat
         Write("Scripts/Core/Interaction/IInteractable.cs",
 @"namespace BillGameCore.Core.Interaction
 {
-    // Implemented by Binder classes (ChestBinder, LootItemBinder ...).
-    // PlayerPresenter calls GetComponent<IInteractable>() on overlap.
-    // PlayerPresenter NEVER knows the concrete Binder type (R07).
+    // Implement bởi các class Binder (ChestBinder, LootItemBinder ...).
+    // PlayerPresenter gọi GetComponent<IInteractable>() khi overlap.
+    // PlayerPresenter KHÔNG BAO GIỜ biết kiểu Binder cụ thể (R07).
     public interface IInteractable
     {
         bool CanInteract();
@@ -261,6 +290,7 @@ namespace BillGameCore.Core.Combat
         Write("Scripts/Core/Inventory/ItemStack.cs",
 @"namespace BillGameCore.Core.Inventory
 {
+    // DTO item + số lượng dùng chung giữa Loot, Inventory và Interaction.
     public readonly struct ItemStack
     {
         public ItemStack(string itemId, int amount) { ItemId = itemId; Amount = amount; }
@@ -274,8 +304,8 @@ namespace BillGameCore.Core.Combat
 
 namespace BillGameCore.Core.Rewards
 {
-    // Emitted by EnemyApplication.OnDied.
-    // Consumed by SceneController → LootSpawner + IRewardGrantService.
+    // Được emit bởi EnemyApplication.OnDied.
+    // Được tiêu thụ bởi SceneController → LootSpawner + IRewardGrantService.
     public sealed class RewardBundle
     {
         public int         Gold       = 0;
@@ -287,6 +317,7 @@ namespace BillGameCore.Core.Rewards
         Write("Scripts/Core/Save/ISaveSnapshotProvider.cs",
 @"namespace BillGameCore.Core.Save
 {
+    // Implement trên Service để SaveService có thể xuất snapshot.
     public interface ISaveSnapshotProvider<out TSnapshot>
     {
         TSnapshot CreateSnapshot();
@@ -296,6 +327,7 @@ namespace BillGameCore.Core.Rewards
         Write("Scripts/Core/Save/ISaveSnapshotConsumer.cs",
 @"namespace BillGameCore.Core.Save
 {
+    // Implement trên Service để SaveService có thể khôi phục snapshot.
     public interface ISaveSnapshotConsumer<in TSnapshot>
     {
         void RestoreSnapshot(TSnapshot snapshot);
@@ -304,12 +336,13 @@ namespace BillGameCore.Core.Rewards
     }
 
     // ═══════════════════════════════════════════════════════
-    //  SHARED PORTS  (refs Core only — R09)
+    //  SHARED PORTS  (chỉ ref Core — R09)
     //
-    //  ICommand and CommandType live HERE (not in Modules.Input) so that
-    //  consumers (PlayerPresenter) only need to reference SharedPorts,
-    //  never Modules.Input directly. Concrete command classes in
-    //  Modules.Input.Commands implement SharedPorts.Input.ICommand.
+    //  ICommand và CommandType đặt TẠI ĐÂY (không trong Modules.Input)
+    //  để consumer (PlayerPresenter) chỉ cần ref SharedPorts,
+    //  không bao giờ ref Modules.Input trực tiếp.
+    //  Các class command cụ thể trong Modules.Input.Commands implement
+    //  SharedPorts.Input.ICommand.
     // ═══════════════════════════════════════════════════════
 
     static void WriteAllSharedPortsFiles()
@@ -320,22 +353,22 @@ namespace BillGameCore.Core.Rewards
 
 namespace BillGameCore.SharedPorts.Input
 {
-    // Declared in SharedPorts so consumers need only ref SharedPorts.
-    // Concrete classes (MoveCommand, AttackCommand ...) live in Modules.Input.Commands
-    // and implement this interface.
+    // Khai báo trong SharedPorts để consumer chỉ cần ref SharedPorts.
+    // Các class cụ thể (MoveCommand, AttackCommand ...) nằm trong
+    // Modules.Input.Commands và implement interface này.
     public interface ICommand
     {
-        EntityId    SourceId  { get; }   // who produced this command (ADR-02 identity)
+        EntityId    SourceId  { get; }   // ai tạo ra command này (ADR-02 identity)
         CommandType Type      { get; }
-        float       Timestamp { get; }   // Time.time when created
+        float       Timestamp { get; }   // Time.time lúc tạo
     }
 }");
 
         Write("Scripts/SharedPorts/Input/CommandType.cs",
 @"namespace BillGameCore.SharedPorts.Input
 {
-    // Placed in SharedPorts so consumers don't ref Modules.Input.
-    // NEVER delete or renumber existing values (replay / save compatibility).
+    // Đặt trong SharedPorts để consumer không cần ref Modules.Input.
+    // KHÔNG XÓA hoặc đánh số lại các giá trị cũ (tương thích replay/save).
     public enum CommandType
     {
         Move          = 0,
@@ -348,6 +381,7 @@ namespace BillGameCore.SharedPorts.Input
         Write("Scripts/SharedPorts/Input/InputContext.cs",
 @"namespace BillGameCore.SharedPorts.Input
 {
+    // Context input hiện tại — điều khiển ActionMap nào đang active.
     public enum InputContext
     {
         None    = 0,
@@ -360,15 +394,19 @@ namespace BillGameCore.SharedPorts.Input
         Write("Scripts/SharedPorts/Input/IInputCommandSource.cs",
 @"namespace BillGameCore.SharedPorts.Input
 {
-    // Consumed by: PlayerPresenter, AI controllers.
-    // Implemented by: InputCommandDispatcher (Modules.Input).
-    // Registered in SceneLifetimeScope as IInputCommandSource.
+    // Tiêu thụ bởi: PlayerPresenter, AI controller.
+    // Implement bởi: InputCommandDispatcher (Modules.Input).
+    // Đăng ký trong SceneLifetimeScope với type IInputCommandSource.
     public interface IInputCommandSource
     {
         bool TryDequeue(out ICommand command);
         bool HasCommands { get; }
     }
 }");
+
+        // FIX-03: Interface dữ liệu hẹp để Entity Presenter đọc payload
+        //         command mà không cần ref namespace Modules.Input (R06/R07).
+        WriteCommandDataInterfaces();
 
         // ── Combat ────────────────────────────────────────
         Write("Scripts/SharedPorts/Combat/ICombatService.cs",
@@ -379,13 +417,13 @@ namespace BillGameCore.SharedPorts.Combat
 {
     public interface ICombatService
     {
-        /// <summary>Melee — resolves damage directly onto the receiver.</summary>
+        /// <summary>Cận chiến — xử lý damage trực tiếp lên receiver.</summary>
         void RequestAttack(EntityId attackerId, IDamageReceiver target, string weaponId);
 
-        /// <summary>Ranged — spawns a projectile; damage resolved on collision.</summary>
+        /// <summary>Tầm xa — spawn projectile; damage tính khi va chạm.</summary>
         void RequestRangedAttack(EntityId attackerId, float dirX, float dirY, string weaponId);
 
-        /// <summary>Called from ProjectilePresenter when the projectile hits a target.</summary>
+        /// <summary>Gọi từ ProjectilePresenter khi projectile trúng mục tiêu.</summary>
         void ResolveProjectileHit(EntityId attackerId, IDamageReceiver target, string projectileId);
     }
 }");
@@ -397,6 +435,7 @@ using System.Collections.Generic;
 
 namespace BillGameCore.SharedPorts.Inventory
 {
+    // Tiêu thụ bởi: UI/InventoryPanel. Implement bởi: InventoryService.
     public interface IInventoryReadService
     {
         IReadOnlyList<ItemStack> GetItems();
@@ -409,6 +448,7 @@ namespace BillGameCore.SharedPorts.Inventory
 
 namespace BillGameCore.SharedPorts.Inventory
 {
+    // Tiêu thụ bởi: LootItemBinder, ChestBinder. Implement bởi: InventoryService.
     public interface IInventoryWriteService
     {
         bool AddItem(ItemStack stack);
@@ -420,6 +460,7 @@ namespace BillGameCore.SharedPorts.Inventory
         Write("Scripts/SharedPorts/Economy/IWalletService.cs",
 @"namespace BillGameCore.SharedPorts.Economy
 {
+    // Tiêu thụ bởi: UI/HUD. Implement bởi: EconomyService.
     public interface IWalletService
     {
         int Gold       { get; }
@@ -432,7 +473,7 @@ namespace BillGameCore.SharedPorts.Inventory
 
 namespace BillGameCore.SharedPorts.Economy
 {
-    // Called by SceneController after enemy dies — grants exp+gold immediately (no loot object).
+    // Gọi bởi SceneController sau khi enemy chết — cộng exp+gold ngay lập tức.
     public interface IRewardGrantService
     {
         void Grant(RewardBundle bundle);
@@ -440,37 +481,41 @@ namespace BillGameCore.SharedPorts.Economy
 }");
 
         // ── Player ────────────────────────────────────────
+        // FIX-01/06: IPlayerReadService expose MaxHealth từ Definition (bất biến).
+        // PlayerApplication implement interface này để UI/HUD chỉ thấy SharedPorts,
+        // không bao giờ thấy Modules.Player.
         Write("Scripts/SharedPorts/Player/IPlayerReadService.cs",
 @"namespace BillGameCore.SharedPorts.Player
 {
-    // Consumed by: UI/HUD. Implemented by: PlayerApplication.
+    // Tiêu thụ bởi: module UI/HUD.
+    // Implement bởi: PlayerApplication (Modules.Player).
+    // Đăng ký sau khi spawn: builder.RegisterInstance(runtime.Application).As<IPlayerReadService>().
     public interface IPlayerReadService
     {
         float CurrentHealth  { get; }
-        float MaxHealth      { get; }
+        float MaxHealth      { get; }   // FIX-07: lấy từ Definition (config bất biến)
         float CurrentStamina { get; }
     }
 }");
 
-        // ── Messages  (Slice 03+ MessagePipe events) ──────
+        // ── Messages  (event MessagePipe từ Slice 03 trở đi) ──────
         Write("Scripts/SharedPorts/Messages/EnemyDiedMessage.cs",
 @"using BillGameCore.Core.Rewards;
+using UnityEngine;
 
 namespace BillGameCore.SharedPorts.Messages
 {
-    // Published by EnemyPresenter from Slice 03+ (MessagePipe unlock — ADR-03).
-    // Consumed by LootSpawner and/or SceneController subscribers.
+    // Publish bởi EnemyPresenter từ Slice 03+ (MessagePipe unlock — ADR-03).
+    // Tiêu thụ bởi LootSpawner và/hoặc SceneController subscriber.
     public sealed class EnemyDiedMessage
     {
-        public RewardBundle Bundle { get; }
-        public float        WorldX { get; }
-        public float        WorldY { get; }
+        public RewardBundle Bundle   { get; }
+        public Vector2      Position { get; }
 
-        public EnemyDiedMessage(RewardBundle bundle, float worldX, float worldY)
+        public EnemyDiedMessage(RewardBundle bundle, Vector2 position)
         {
-            Bundle = bundle;
-            WorldX = worldX;
-            WorldY = worldY;
+            Bundle   = bundle;
+            Position = position;
         }
     }
 }");
@@ -480,7 +525,7 @@ namespace BillGameCore.SharedPorts.Messages
 
 namespace BillGameCore.SharedPorts.Messages
 {
-    // Published by LootItemBinder after a successful pickup (Slice 03+).
+    // Publish bởi LootItemBinder sau khi nhặt item thành công (Slice 03+).
     public sealed class ItemPickedUpMessage
     {
         public ItemStack Stack { get; }
@@ -490,7 +535,51 @@ namespace BillGameCore.SharedPorts.Messages
     }
 
     // ═══════════════════════════════════════════════════════
-    //  COMPOSITION  (integrator-owned)
+    //  SHARED PORTS — IMoveCommand / IAttackCommand / IInteractCommand
+    //  (Hỗ trợ FIX-03: interface dữ liệu hẹp để Entity Presenter
+    //   đọc payload command mà không ref Modules.Input)
+    // ═══════════════════════════════════════════════════════
+
+    static void WriteCommandDataInterfaces()
+    {
+        Write("Scripts/SharedPorts/Input/IMoveCommand.cs",
+@"namespace BillGameCore.SharedPorts.Input
+{
+    // FIX-03: Interface dữ liệu hẹp để Entity Presenter đọc hướng di chuyển
+    //         mà không cần ref namespace BillGameCore.Modules.Input (R06/R07).
+    // Implement bởi: BillGameCore.Modules.Input.Commands.MoveCommand.
+    public interface IMoveCommand : ICommand
+    {
+        float DirX     { get; }
+        float DirY     { get; }
+        bool  IsMoving { get; }
+    }
+}");
+
+        Write("Scripts/SharedPorts/Input/IAttackCommand.cs",
+@"namespace BillGameCore.SharedPorts.Input
+{
+    // FIX-03: Interface dữ liệu hẹp để Entity Presenter đọc trạng thái Attack
+    //         mà không cần ref namespace BillGameCore.Modules.Input (R06/R07).
+    // Implement bởi: BillGameCore.Modules.Input.Commands.AttackCommand.
+    public interface IAttackCommand : ICommand
+    {
+        bool  IsHeld       { get; }
+        float HeldDuration { get; }
+    }
+}");
+
+        Write("Scripts/SharedPorts/Input/IInteractCommand.cs",
+@"namespace BillGameCore.SharedPorts.Input
+{
+    // FIX-03/09: Interface marker cho Interact command.
+    // Implement bởi: BillGameCore.Modules.Input.Commands.InteractCommand.
+    public interface IInteractCommand : ICommand { }
+}");
+    }
+
+    // ═══════════════════════════════════════════════════════
+    //  COMPOSITION  (thuộc quyền integrator)
     // ═══════════════════════════════════════════════════════
 
     static void WriteAllCompositionFiles()
@@ -501,15 +590,15 @@ using VContainer.Unity;
 
 namespace BillGameCore.Composition
 {
-    // INTEGRATOR-OWNED — do not edit from a feature-slice task.
-    // ADR-06: register services that must survive scene loads:
+    // THUỘC INTEGRATOR — không được sửa từ task feature slice (R14).
+    // ADR-06: đăng ký service tồn tại xuyên scene load:
     //   InventoryService, EconomyService, SaveService, AudioService.
-    // R04: NEVER register EntityState / EntityApplication / Presenter / Runtime here.
+    // R04: KHÔNG BAO GIỜ đăng ký EntityState / EntityApplication / Presenter / Runtime ở đây.
     public sealed class ProjectLifetimeScope : LifetimeScope
     {
         protected override void Configure(IContainerBuilder builder)
         {
-            // ── Add registrations below as slices are merged ──────────────────
+            // ── Thêm registration khi từng slice được merge ───────────────────
 
             // Slice 05 — InventoryGroup:
             // builder.Register<InventoryService>(Lifetime.Singleton)
@@ -525,7 +614,7 @@ namespace BillGameCore.Composition
             // Slice 08 — Audio:
             // builder.Register<AudioService>(Lifetime.Singleton);
 
-            // Slice 03+ — MessagePipe unlock (ADR-03):
+            // Slice 03+ — Mở khóa MessagePipe (ADR-03, R13):
             // builder.RegisterMessagePipe();
             // builder.RegisterMessageBroker<EnemyDiedMessage>();
             // builder.RegisterMessageBroker<ItemPickedUpMessage>();
@@ -539,27 +628,27 @@ using VContainer.Unity;
 
 namespace BillGameCore.Composition
 {
-    // INTEGRATOR-OWNED — do not edit from a feature-slice task.
-    // Register: spawners, scene controllers, MonoBehaviour components, config SO refs.
-    // Parent = ProjectLifetimeScope so SceneScope resolves ProjectScope services.
-    // R04: NEVER register EntityState / EntityApplication / Presenter / Runtime here.
+    // THUỘC INTEGRATOR — không được sửa từ task feature slice (R14).
+    // Parent = ProjectLifetimeScope để SceneScope resolve được service của ProjectScope.
+    // R04: KHÔNG BAO GIỜ đăng ký EntityState / EntityApplication / Presenter / Runtime ở đây.
     public sealed class SceneLifetimeScope : LifetimeScope
     {
         protected override void Configure(IContainerBuilder builder)
         {
             builder.RegisterEntryPoint<GameBootstrapper>();
 
-            // ── Add registrations below as slices are merged ──────────────────
+            // ── Thêm registration khi từng slice được merge ───────────────────
 
             // Slice 01 — Input:
             // builder.Register<CommandBuffer>(Lifetime.Singleton);
             // builder.Register<InputCommandDispatcher>(Lifetime.Singleton).As<IInputCommandSource>();
-            // builder.RegisterComponent(inputReaderRef);   // MonoBehaviour on scene GO
+            // builder.RegisterComponent(inputReaderRef);   // kéo MonoBehaviour GO vào slot
 
             // Slice 02 — Player:
             // builder.Register<PlayerSpawner>(Lifetime.Scoped);
-            // builder.RegisterInstance(playerConfigRef);   // SO asset dragged into Inspector slot
-            // builder.RegisterInstance(playerViewPrefabRef);
+            // builder.RegisterInstance(playerConfigRef);        // SO asset
+            // builder.RegisterInstance(playerViewPrefabRef);    // Prefab
+            // Sau Spawn: builder.RegisterInstance(runtime.Application).As<IPlayerReadService>();
 
             // Slice 03 — CombatGroup:
             // builder.Register<CombatApplication>(Lifetime.Scoped).As<ICombatService>();
@@ -567,10 +656,14 @@ namespace BillGameCore.Composition
 
             // Slice 04 — EnemyGroup:
             // builder.Register<EnemySpawner>(Lifetime.Scoped);
-            // builder.Register<LootSpawner>(Lifetime.Scoped); // R17: uses container.Instantiate
+            // builder.Register<LootSpawner>(Lifetime.Scoped); // R17: dùng container.Instantiate
 
             // Scenes:
             // builder.RegisterComponent(sceneControllerRef);
+
+            // Slice 08 — UI:
+            // builder.Register<HUDPresenter>(Lifetime.Scoped);
+            // builder.Register<InventoryPanelPresenter>(Lifetime.Scoped);
         }
     }
 }");
@@ -581,27 +674,33 @@ using VContainer.Unity;
 
 namespace BillGameCore.Composition
 {
-    // Scene entry point — constructor injection via VContainer.
-    // Add dependencies and startup calls as slices are merged.
+    // Entry point của scene — VContainer gọi Start() sau khi build DI xong.
+    // Chỉ dùng constructor injection — không có [Inject] field (pure C# class).
+    // Thêm dependency và startup call khi từng slice được merge.
     public sealed class GameBootstrapper : IStartable
     {
-        // Example (Slice 02):
-        // private readonly PlayerSpawner _playerSpawner;
-        // private readonly InputReader   _inputReader;
+        // ── Ví dụ Slice 02 (bỏ comment khi Player slice được merge) ──────────
+        // private readonly PlayerSpawner  _playerSpawner;
+        // private readonly InputReader    _inputReader;
+        // private readonly SceneController _sceneController;
         //
-        // public GameBootstrapper(PlayerSpawner playerSpawner, InputReader inputReader)
+        // public GameBootstrapper(PlayerSpawner playerSpawner,
+        //                         InputReader   inputReader,
+        //                         SceneController sceneController)
         // {
-        //     _playerSpawner = playerSpawner;
-        //     _inputReader   = inputReader;
+        //     _playerSpawner   = playerSpawner;
+        //     _inputReader     = inputReader;
+        //     _sceneController = sceneController;
         // }
 
         public void Start()
         {
-            Debug.Log(""[GameBootstrapper] Scene started."");
+            Debug.Log(""[GameBootstrapper] Scene đã khởi động."");
 
-            // Example (Slice 02):
+            // ── Slice 02: spawn player và bind input ─────────────────────────
             // var runtime = _playerSpawner.Spawn(Vector2.zero);
             // _inputReader.SetControlledEntity(runtime.Id);
+            // _sceneController.SetPlayerRuntime(runtime);
         }
     }
 }");
@@ -613,8 +712,11 @@ namespace BillGameCore.Composition
 
     static void WriteScenesFile()
     {
+        // FIX-10: Signature HandleEnemyDied sửa đúng thành (EntityId, RewardBundle, Vector2)
+        //         khớp contract event OnDied mới (FIX-02).
         Write("Scripts/Scenes/SceneController.cs",
 @"using BillGameCore.Core.Rewards;
+using EntityId = BillGameCore.Core.ValueObjects.EntityId;
 using BillGameCore.SharedPorts.Economy;
 using UnityEngine;
 using VContainer;
@@ -624,20 +726,25 @@ using VContainer;
 
 namespace BillGameCore.Scenes
 {
-    // Mediator — wires cross-module events using direct calls (Phase 1).
-    // From Slice 03+: replace direct callbacks with MessagePipe publish/subscribe.
-    // R01: No Find() or FindObjectOfType() — all refs injected via [Inject] or constructor.
+    // Mediator — wire cross-module event bằng direct callback (Phase 1).
+    // Từ Slice 03+: thay direct callback bằng MessagePipe publish/subscribe.
+    // R01: Không dùng Find() hay FindObjectOfType() — mọi ref qua [Inject] hoặc constructor.
+    // R06: SceneController chỉ đụng interface SharedPorts, không đụng nội bộ module.
     public sealed class SceneController : MonoBehaviour
     {
         [Inject] private IRewardGrantService _rewardGrant;
-        // [Inject] private LootSpawner _lootSpawner;  // add when Slice 04 ready
+        // Slice 04: [Inject] private LootSpawner _lootSpawner;
 
-        // Called by EnemyPresenter callback (Phase 1) — or via MessagePipe subscriber (Phase 2).
-        public void HandleEnemyDied(RewardBundle bundle, float worldX, float worldY)
+        // FIX-10: Signature khớp với EnemyApplication.OnDied (EntityId, RewardBundle, Vector2).
+        // Được gọi bởi EnemyPresenter.OnDiedCallback — wire trong GameBootstrapper sau EnemySpawner.Spawn().
+        public void HandleEnemyDied(EntityId entityId, RewardBundle bundle, Vector2 worldPosition)
         {
             _rewardGrant?.Grant(bundle);
-            // _lootSpawner?.Spawn(bundle, new UnityEngine.Vector2(worldX, worldY));
+            // Slice 04: _lootSpawner?.Spawn(bundle, worldPosition);
         }
+
+        // Slice 02: lưu PlayerRuntime để expose IPlayerReadService vào DI sau khi spawn.
+        // public void SetPlayerRuntime(PlayerRuntime runtime) { ... }
     }
 }");
     }
@@ -648,15 +755,15 @@ namespace BillGameCore.Scenes
 
     static void WriteAllAsmdefs()
     {
-        // Core: no Unity.InputSystem, no module refs (R08)
+        // Core: không ref Unity.InputSystem, không ref module (R08)
         WriteAsmdef("Scripts/Core", "BillGameCore.Core",
             new string[0], editorOnly: false);
 
-        // SharedPorts: refs Core only (R09)
+        // SharedPorts: chỉ ref Core (R09)
         WriteAsmdef("Scripts/SharedPorts", "BillGameCore.SharedPorts",
             new[] { "BillGameCore.Core" }, editorOnly: false);
 
-        // Composition: integrator — refs grow as slices merge
+        // Composition: thuộc integrator — ref tăng dần khi slice được merge
         WriteAsmdef("Scripts/Composition", "BillGameCore.Composition",
             new[] { "BillGameCore.Core", "BillGameCore.SharedPorts",
                     "VContainer", "VContainer.Unity" }, editorOnly: false);
@@ -672,7 +779,7 @@ namespace BillGameCore.Scenes
     }
 
     // ═══════════════════════════════════════════════════════
-    //  INPUT MODULE  (Full Command Pattern — ADR-02)
+    //  MODULE INPUT  (Full Command Pattern — ADR-02)
     // ═══════════════════════════════════════════════════════
 
     static void CreateInputModule()
@@ -693,7 +800,8 @@ using BillGameCore.SharedPorts.Input;
 
 namespace BillGameCore.Modules.Input.Commands
 {
-    public sealed class MoveCommand : ICommand
+    // Implement cả IMoveCommand để Entity Presenter đọc DirX/Y mà không ref module này (FIX-03).
+    public sealed class MoveCommand : IMoveCommand
     {
         public MoveCommand(EntityId sourceId, float dirX, float dirY, float timestamp)
         {
@@ -718,7 +826,8 @@ using BillGameCore.SharedPorts.Input;
 
 namespace BillGameCore.Modules.Input.Commands
 {
-    public sealed class AttackCommand : ICommand
+    // Implement cả IAttackCommand để Entity Presenter đọc IsHeld/HeldDuration (FIX-03).
+    public sealed class AttackCommand : IAttackCommand
     {
         public AttackCommand(EntityId sourceId, float timestamp,
                              bool isHeld = false, float heldDuration = 0f)
@@ -732,8 +841,8 @@ namespace BillGameCore.Modules.Input.Commands
         public EntityId    SourceId     { get; }
         public CommandType Type         => CommandType.Attack;
         public float       Timestamp    { get; }
-        public bool        IsHeld       { get; }   // true while button held
-        public float       HeldDuration { get; }   // seconds held so far
+        public bool        IsHeld       { get; }   // true khi đang giữ nút
+        public float       HeldDuration { get; }   // số giây đã giữ
     }
 }");
 
@@ -743,7 +852,8 @@ using BillGameCore.SharedPorts.Input;
 
 namespace BillGameCore.Modules.Input.Commands
 {
-    public sealed class InteractCommand : ICommand
+    // Implement cả IInteractCommand (marker interface trong SharedPorts — FIX-03/09).
+    public sealed class InteractCommand : IInteractCommand
     {
         public InteractCommand(EntityId sourceId, float timestamp)
         {
@@ -772,10 +882,10 @@ namespace BillGameCore.Modules.Input.Commands
             Timestamp     = timestamp;
         }
 
-        public EntityId     SourceId      { get; }
-        public CommandType  Type          => CommandType.SwitchContext;
-        public float        Timestamp     { get; }
-        public InputContext  TargetContext { get; }
+        public EntityId    SourceId      { get; }
+        public CommandType Type          => CommandType.SwitchContext;
+        public float       Timestamp     { get; }
+        public InputContext TargetContext { get; }
     }
 }");
 
@@ -785,8 +895,8 @@ using BillGameCore.SharedPorts.Input;
 
 namespace BillGameCore.Modules.Input.Commands
 {
-    // Thread-safe FIFO.
-    // R16: Only InputReader (Infrastructure) is allowed to call Enqueue().
+    // FIFO thread-safe.
+    // R16: Chỉ InputReader (Infrastructure) được phép gọi Enqueue().
     public sealed class CommandBuffer
     {
         private readonly Queue<ICommand> _queue   = new Queue<ICommand>();
@@ -795,12 +905,12 @@ namespace BillGameCore.Modules.Input.Commands
 
         public CommandBuffer(int maxSize = 32) { _maxSize = maxSize; }
 
-        // R16: called ONLY from InputReader.
+        // R16: CHỈ được gọi từ InputReader.
         public void Enqueue(ICommand command)
         {
             lock (_lock)
             {
-                if (_queue.Count >= _maxSize) _queue.Dequeue(); // drop oldest on overflow
+                if (_queue.Count >= _maxSize) _queue.Dequeue(); // bỏ cũ nhất khi tràn
                 _queue.Enqueue(command);
             }
         }
@@ -817,7 +927,7 @@ namespace BillGameCore.Modules.Input.Commands
 
         public bool HasCommands { get { lock (_lock) return _queue.Count > 0; } }
 
-        // Called by InputReader.SwitchContext() to flush stale commands.
+        // Gọi bởi InputReader.SwitchContext() để xả command cũ.
         public void Clear() { lock (_lock) _queue.Clear(); }
     }
 }");
@@ -829,9 +939,9 @@ using BillGameCore.SharedPorts.Input;
 
 namespace BillGameCore.Modules.Input.Application
 {
-    // Registered in SceneLifetimeScope as IInputCommandSource.
-    // Thin adapter: CommandBuffer → IInputCommandSource.
-    // Consumer Presenters inject IInputCommandSource — never know InputReader exists.
+    // Đăng ký trong SceneLifetimeScope với type IInputCommandSource.
+    // Adapter mỏng: CommandBuffer → IInputCommandSource.
+    // Consumer Presenter inject IInputCommandSource — không biết InputReader tồn tại.
     public sealed class InputCommandDispatcher : IInputCommandSource
     {
         private readonly CommandBuffer _buffer;
@@ -843,27 +953,29 @@ namespace BillGameCore.Modules.Input.Application
     }
 }");
 
-        // Context stubs ───────────────────────────────────
+        // Context constants ───────────────────────────────
         Write("Scripts/Modules/Input/Context/PlayerInputContext.cs",
 @"namespace BillGameCore.Modules.Input.Context
 {
+    // Tên ActionMap trong InputActions asset cho context Player.
     public static class PlayerInputContext  { public const string ActionMapName = ""Player"";  }
 }");
         Write("Scripts/Modules/Input/Context/VehicleInputContext.cs",
 @"namespace BillGameCore.Modules.Input.Context
 {
+    // Tên ActionMap trong InputActions asset cho context Vehicle.
     public static class VehicleInputContext { public const string ActionMapName = ""Vehicle""; }
 }");
         Write("Scripts/Modules/Input/Context/UIInputContext.cs",
 @"namespace BillGameCore.Modules.Input.Context
 {
+    // Tên ActionMap trong InputActions asset cho context UI.
     public static class UIInputContext      { public const string ActionMapName = ""UI"";      }
 }");
 
-        // Infrastructure — the ONLY class allowed to call CommandBuffer.Enqueue() ─────
+        // Infrastructure — class DUY NHẤT được phép gọi CommandBuffer.Enqueue() ─────
         Write("Scripts/Modules/Input/Infrastructure/InputReader.cs",
-@"
-using BillGameCore.Modules.Input.Commands;
+@"using BillGameCore.Modules.Input.Commands;
 using BillGameCore.Modules.Input.Context;
 using BillGameCore.SharedPorts.Input;
 using UnityEngine;
@@ -873,30 +985,30 @@ using EntityId = BillGameCore.Core.ValueObjects.EntityId;
 
 namespace BillGameCore.Modules.Input.Infrastructure
 {
-    // MonoBehaviour — translates New Input System events into ICommand objects.
-    // R03: No business logic — only raw-input → Command translation.
-    // R16: This is the ONLY class allowed to call CommandBuffer.Enqueue().
-    // R17: Registered via builder.RegisterComponent<InputReader>() — VContainer resolves [Inject].
+    // MonoBehaviour — dịch event New Input System thành ICommand object.
+    // R03: Không có business logic — chỉ raw-input → Command translation.
+    // R16: Đây là class DUY NHẤT được phép gọi CommandBuffer.Enqueue().
+    // R17: Đăng ký qua builder.RegisterComponent<InputReader>() — VContainer resolve [Inject].
     public sealed class InputReader : MonoBehaviour
     {
-        [Inject] private CommandBuffer _buffer;            // injected by VContainer
+        [Inject] private CommandBuffer _buffer; // được inject bởi VContainer
 
-        [SerializeField] private PlayerInput _playerInput; // assign in Inspector
+        [SerializeField] private PlayerInput _playerInput; // gắn trong Inspector
 
         private EntityId     _controlledEntityId = EntityId.Invalid;
         private InputContext _currentContext      = InputContext.Player;
 
-        // Hold-state for Attack
+        // Trạng thái giữ nút Attack
         private bool  _attackHeld;
         private float _attackHeldStart;
 
-        // Called by GameBootstrapper after PlayerSpawner.Spawn() returns a Runtime.
+        // Gọi bởi GameBootstrapper sau khi PlayerSpawner.Spawn() trả về Runtime.
         public void SetControlledEntity(EntityId id) => _controlledEntityId = id;
 
         public void SwitchContext(InputContext context)
         {
             _currentContext = context;
-            _buffer.Clear(); // flush stale commands (CONTEXT 14E)
+            _buffer.Clear(); // xả command cũ (CONTEXT §14E)
             _playerInput.SwitchCurrentActionMap(context switch
             {
                 InputContext.Player  => PlayerInputContext.ActionMapName,
@@ -913,15 +1025,18 @@ namespace BillGameCore.Modules.Input.Infrastructure
             {
                 case InputContext.Player:  ReadPlayerMap();  break;
                 case InputContext.Vehicle: ReadVehicleMap(); break;
+                // UI do Unity EventSystem xử lý — không cần đọc thủ công
             }
         }
 
-        // R16: All Enqueue calls are inside this file only.
+        // R16: Tất cả lệnh Enqueue chỉ nằm trong file này.
         private void ReadPlayerMap()
         {
+            // Di chuyển — đọc mỗi frame (liên tục)
             var mv = _playerInput.actions[""Player/Move""].ReadValue<Vector2>();
             _buffer.Enqueue(new MoveCommand(_controlledEntityId, mv.x, mv.y, Time.time));
 
+            // Tấn công — theo dõi giữ nút
             var atk = _playerInput.actions[""Player/Attack""];
             if (atk.WasPressedThisFrame()) { _attackHeld = true; _attackHeldStart = Time.time; }
             if (_attackHeld)
@@ -930,13 +1045,14 @@ namespace BillGameCore.Modules.Input.Infrastructure
                                                   heldDuration: Time.time - _attackHeldStart));
             if (atk.WasReleasedThisFrame()) _attackHeld = false;
 
+            // Tương tác — một lần mỗi lần nhấn
             if (_playerInput.actions[""Player/Interact""].WasPressedThisFrame())
                 _buffer.Enqueue(new InteractCommand(_controlledEntityId, Time.time));
         }
 
         private void ReadVehicleMap()
         {
-            // Implement Vehicle action reads here when Vehicle slice is built.
+            // Thêm đọc Vehicle action ở đây khi slice Vehicle được build.
         }
     }
 }");
@@ -947,7 +1063,20 @@ namespace BillGameCore.Modules.Input.Infrastructure
     }
 
     // ═══════════════════════════════════════════════════════
-    //  ENTITY ARCHETYPE
+    //  ARCHETYPE ENTITY
+    //
+    //  Dùng cho: Player, Enemy, Boss, Projectile, Mount, NPC.
+    //
+    //  Điểm sửa quan trọng so với v2.0:
+    //  FIX-01/06: {n}Application giờ implement IPlayerReadService (archetype Player).
+    //  FIX-02:    Event OnDied: Action<EntityId, RewardBundle, Vector2>.
+    //  FIX-03:    Presenter dùng CommandType enum (SharedPorts) thay vì
+    //             kiểu cụ thể MoveCommand/AttackCommand (Modules.Input).
+    //  FIX-04:    Asmdef Spawner không còn ref Modules.Input.
+    //  FIX-05:    OnDiedCallback khớp với signature OnDied đã sửa.
+    //  FIX-09:    InteractCommand xử lý trong vòng lặp command queue.
+    //  FIX-11:    BuildRewardBundle() đổi từ "protected virtual" (lỗi trên
+    //             sealed class) sang Func<RewardBundle> inject vào constructor.
     // ═══════════════════════════════════════════════════════
 
     static void CreateEntityModule(string n)
@@ -967,26 +1096,26 @@ namespace BillGameCore.Modules.Input.Infrastructure
         Write($"Scripts/Modules/{n}/Domain/{n}Definition.cs",
 $@"namespace BillGameCore.Modules.{n}.Domain
 {{
-    // Static gameplay data. Populated by {n}Config.ToDefinition(). Immutable at runtime.
-    // R15: Pure C# — NO UnityEngine types in Domain.
+    // Dữ liệu gameplay tĩnh. Được điền bởi {n}Config.ToDefinition(). Bất biến khi runtime.
+    // R15: Thuần C# — KHÔNG có UnityEngine types trong Domain.
     [System.Serializable]
     public sealed class {n}Definition
     {{
-        public float MoveSpeed = 5f;
-        public float MaxHealth = 100f;
+        public float MoveSpeed  = 5f;
+        public float MaxHealth  = 100f;
         public float MaxStamina = 100f;
-        // Add entity-specific stats here.
+        // Thêm stat đặc thù của entity ở đây.
     }}
 }}");
 
         Write($"Scripts/Modules/{n}/Domain/{n}State.cs",
 $@"namespace BillGameCore.Modules.{n}.Domain
 {{
-    // Mutable runtime state for ONE {n} instance.
-    // Owned and mutated exclusively by {n}Application.
-    // R04: NEVER registered in DI scope.
-    // R10: NEVER stored in ScriptableObject.
-    // R15: Pure C# — NO UnityEngine types.
+    // Trạng thái runtime có thể thay đổi cho MỘT instance {n}.
+    // Chỉ được sở hữu và thay đổi bởi {n}Application.
+    // R04: KHÔNG BAO GIỜ đăng ký vào DI scope.
+    // R10: KHÔNG BAO GIỜ lưu trong ScriptableObject.
+    // R15: Thuần C# — KHÔNG có UnityEngine types.
     public sealed class {n}State
     {{
         public float CurrentHealth  {{ get; set; }}
@@ -994,50 +1123,79 @@ $@"namespace BillGameCore.Modules.{n}.Domain
         public float VelocityX      {{ get; set; }}
         public float VelocityY      {{ get; set; }}
         public bool  IsDead         {{ get; set; }}
-        // Add entity-specific runtime fields here.
+        // Thêm trường runtime đặc thù của entity ở đây.
     }}
 }}");
 
         // Application ─────────────────────────────────────
+        // FIX-01/06: Implement IPlayerReadService để UI inject qua SharedPorts.
+        //            MaxHealth lấy từ _def (Definition) — config bất biến (FIX-07).
+        // FIX-02:    OnDied mang (EntityId, RewardBundle, Vector2) cho SceneController (§14C).
+        // FIX-11:    BuildRewardBundle là Func<RewardBundle> inject vào constructor thay vì
+        //            protected virtual method — tránh lỗi compile trên sealed class.
+        //            Enemy Spawner truyền lambda lấy loot từ EnemyDefinition.
+        //            Player Spawner truyền null hoặc lambda trả về RewardBundle rỗng.
         Write($"Scripts/Modules/{n}/Application/{n}Application.cs",
 $@"using System;
 using BillGameCore.Core.Combat;
-using BillGameCore.Core.ValueObjects;
+using BillGameCore.Core.Rewards;
+using EntityId = BillGameCore.Core.ValueObjects.EntityId;
 using BillGameCore.Modules.{n}.Domain;
+using BillGameCore.SharedPorts.Player;
+using UnityEngine;
 
 namespace BillGameCore.Modules.{n}.Application
 {{
-    // {n} use-case logic.
-    // Implements IDamageReceiver — CombatApplication calls ReceiveDamage() via shared contract.
-    // R15: NO MonoBehaviour, Transform, Animator, Rigidbody2D, ScriptableObject here.
-    // R07: NO direct reference to other module namespaces — use SharedPorts contracts only.
-    public sealed class {n}Application : IDamageReceiver
+    // Logic use-case của {n}.
+    // Implement IDamageReceiver — CombatApplication gọi ReceiveDamage() qua shared contract.
+    // Implement IPlayerReadService — UI/HUD inject qua SharedPorts (không qua Modules.{n}).
+    // R15: KHÔNG có MonoBehaviour, Transform, Animator, Rigidbody2D, ScriptableObject ở đây.
+    // R07: KHÔNG tham chiếu trực tiếp namespace module khác — dùng SharedPorts contracts.
+    //
+    // GHI CHÚ: IPlayerReadService đặc thù cho Player. Với archetype Enemy, xóa interface đó
+    //          và các property tương ứng — UI không bao giờ đọc stat enemy trực tiếp.
+    //
+    // FIX-11: rewardBundleFactory là Func<RewardBundle> inject vào constructor.
+    //         Enemy Spawner truyền: () => new RewardBundle {{ Gold = def.Gold, ... }}
+    //         Player Spawner truyền: null (sẽ dùng bundle rỗng mặc định).
+    public sealed class {n}Application : IDamageReceiver, IPlayerReadService
     {{
-        private readonly {n}Definition _def;
-        private readonly {n}State      _state;
+        private readonly {n}Definition        _def;
+        private readonly {n}State             _state;
+        private readonly Func<RewardBundle>   _rewardBundleFactory; // FIX-11
 
-        // C# event — Presenter listens and notifies SceneController (Phase 1 callback / Phase 2 MessagePipe).
-        public event Action<EntityId> OnDied;
+        // FIX-02: Event mang EntityId + RewardBundle + vị trí thế giới để SceneController
+        //         gọi LootSpawner.Spawn(bundle, pos) và IRewardGrantService.Grant(bundle).
+        //         Với archetype Player, RewardBundle sẽ null/rỗng — điều đó là bình thường.
+        public event Action<EntityId, RewardBundle, Vector2> OnDied;
 
-        // R18: EntityId provided by Spawner — never call EntityId.New() here.
+        // R18: EntityId do Spawner cung cấp — không bao giờ gọi EntityId.New() ở đây.
         public EntityId Id {{ get; }}
 
-        public {n}Application(EntityId id, {n}Definition def, {n}State state)
+        // FIX-11: rewardBundleFactory có thể null (Player không drop loot).
+        public {n}Application(EntityId id, {n}Definition def, {n}State state,
+                              Func<RewardBundle> rewardBundleFactory = null)
         {{
-            Id     = id;
-            _def   = def;
-            _state = state;
+            Id                   = id;
+            _def                 = def;
+            _state               = state;
+            _rewardBundleFactory = rewardBundleFactory;
             _state.CurrentHealth  = def.MaxHealth;
             _state.CurrentStamina = def.MaxStamina;
         }}
 
+        // ── IPlayerReadService ────────────────────────────────────────────────
+        // FIX-06/07: MaxHealth từ _def (bất biến), CurrentHealth/Stamina từ _state.
         public float CurrentHealth  => _state.CurrentHealth;
+        public float MaxHealth      => _def.MaxHealth;
         public float CurrentStamina => _state.CurrentStamina;
-        public float VelocityX      => _state.VelocityX;
-        public float VelocityY      => _state.VelocityY;
-        public bool  IsDead         => _state.IsDead;
 
-        // Called by Presenter each frame with direction values from the command queue.
+        // Accessor nội bộ cho Presenter (write velocity ra View).
+        public float VelocityX => _state.VelocityX;
+        public float VelocityY => _state.VelocityY;
+        public bool  IsDead    => _state.IsDead;
+
+        // Gọi bởi Presenter mỗi frame với giá trị direction từ command queue.
         public void Tick(float dirX, float dirY, float deltaTime)
         {{
             if (_state.IsDead) return;
@@ -1045,7 +1203,7 @@ namespace BillGameCore.Modules.{n}.Application
             _state.VelocityY = dirY * _def.MoveSpeed;
         }}
 
-        // IDamageReceiver — called by CombatApplication ONLY (CONTEXT Section 14A).
+        // IDamageReceiver — CHỈ được gọi bởi CombatApplication (CONTEXT §14A).
         public DamageResult ReceiveDamage(DamageInfo damage)
         {{
             if (_state.IsDead) return new DamageResult(0f, 0f, false);
@@ -1057,7 +1215,12 @@ namespace BillGameCore.Modules.{n}.Application
             if (justDied)
             {{
                 _state.IsDead = true;
-                OnDied?.Invoke(Id);
+                // FIX-11: Dùng factory được inject thay vì protected virtual method.
+                //         Truyền Vector2.zero — Presenter sẽ cung cấp vị trí thực từ View.
+                var bundle = _rewardBundleFactory != null
+                    ? _rewardBundleFactory.Invoke()
+                    : new RewardBundle();
+                OnDied?.Invoke(Id, bundle, Vector2.zero);
             }}
 
             return new DamageResult(applied, _state.CurrentHealth, justDied);
@@ -1071,8 +1234,8 @@ $@"using UnityEngine;
 
 namespace BillGameCore.Modules.{n}.Presentation
 {{
-    // Unity-facing visual output for {n}.
-    // R03: MonoBehaviour callbacks ONLY forward to Presenter — ZERO business logic here.
+    // Output visual phía Unity cho {n}.
+    // R03: MonoBehaviour callback CHỈ forward sang Presenter — KHÔNG có business logic nào ở đây.
     [RequireComponent(typeof(Rigidbody2D))]
     public sealed class {n}View : MonoBehaviour
     {{
@@ -1081,17 +1244,17 @@ namespace BillGameCore.Modules.{n}.Presentation
         private Rigidbody2D  _rb;
         private {n}Presenter _presenter;
 
-        private void Awake() => _rb = GetComponent<Rigidbody2D>(); // self-GetComponent is allowed
+        private void Awake() => _rb = GetComponent<Rigidbody2D>(); // GetComponent trên self được phép
 
-        // Called once by {n}Spawner immediately after Instantiate.
+        // Gọi một lần bởi {n}Spawner ngay sau Instantiate.
         public void Bind({n}Presenter presenter) => _presenter = presenter;
 
-        // R03: forward only ──────────────────────────────
+        // R03: chỉ forward ──────────────────────────────────
         private void Update()                         => _presenter?.OnUpdate(Time.deltaTime);
         private void FixedUpdate()                    => _presenter?.OnFixedUpdate();
         private void OnTriggerEnter2D(Collider2D col) => _presenter?.OnTriggerEnter2D(col);
 
-        // View write methods — called by Presenter only ──
+        // Các method write của View — chỉ được gọi bởi Presenter ──────
         public void SetVelocity(float vx, float vy)
         {{
             if (_rb) _rb.linearVelocity = new Vector2(vx, vy);
@@ -1106,43 +1269,66 @@ namespace BillGameCore.Modules.{n}.Presentation
         }}
 
         public void PlayDeath() {{ if (_animator) _animator.SetTrigger(""Die""); }}
+
+        // Vị trí thế giới thực — Presenter dùng khi emit OnDied (FIX-05).
+        public Vector2 WorldPosition => transform.position;
     }}
 }}");
 
+        // FIX-03: Presenter KHÔNG còn ref namespace Modules.Input.Commands.
+        //         Dispatch command qua CommandType enum và cast sang interface
+        //         IMoveCommand / IAttackCommand / IInteractCommand trong SharedPorts.
+        // FIX-05: Signature OnDiedCallback khớp với Application.OnDied (EntityId, RewardBundle, Vector2).
+        // FIX-09: InteractCommand xử lý trong vòng lặp command queue, dùng flag _pendingInteract.
         Write($"Scripts/Modules/{n}/Presentation/{n}Presenter.cs",
 $@"using System;
 using BillGameCore.Core.Interaction;
+using BillGameCore.Core.Rewards;
 using EntityId = BillGameCore.Core.ValueObjects.EntityId;
 using BillGameCore.Modules.{n}.Application;
-using BillGameCore.Modules.Input.Commands;
+using BillGameCore.SharedPorts.Combat;
 using BillGameCore.SharedPorts.Input;
 using UnityEngine;
 
 namespace BillGameCore.Modules.{n}.Presentation
 {{
-    // Bridges IInputCommandSource → {n}Application → {n}View each frame.
-    // Constructed by {n}Spawner — NOT by DI container (R04).
+    // Bridge IInputCommandSource → {n}Application → {n}View mỗi frame.
+    // Được tạo bởi {n}Spawner — KHÔNG qua DI container (R04).
+    //
+    // FIX-03: Dùng CommandType enum + interface IMoveCommand/IAttackCommand (SharedPorts).
+    //         KHÔNG tham chiếu BillGameCore.Modules.Input.Commands namespace (R06/R07).
+    // FIX-05: Signature OnDiedCallback khớp với Application.OnDied (§14C).
     public sealed class {n}Presenter : IDisposable
     {{
-        private readonly {n}Application  _app;
-        private readonly {n}View         _view;
+        private readonly {n}Application      _app;
+        private readonly {n}View             _view;
         private readonly IInputCommandSource _input;
+        private readonly ICombatService      _combat; // null cho đến khi Slice 03 được merge
 
         private bool  _deathPlayed;
         private float _lastDirX, _lastDirY;
+        private bool  _pendingInteract; // FIX-09
 
-        // Wired by SceneController so Presenter has no knowledge of LootSpawner etc.
-        public Action<EntityId> OnDiedCallback;
+        // FIX-05: Callback mang (EntityId, RewardBundle, Vector2) khớp với
+        //         EnemyApplication.OnDied và SceneController.HandleEnemyDied.
+        public Action<EntityId, RewardBundle, Vector2> OnDiedCallback;
 
+        // Constructor khi ICombatService chưa có (Slice 01-02).
         public {n}Presenter({n}Application app, {n}View view, IInputCommandSource input)
+            : this(app, view, input, null) {{ }}
+
+        // Constructor từ Slice 03 trở đi khi ICombatService đã có.
+        public {n}Presenter({n}Application app, {n}View view,
+                            IInputCommandSource input, ICombatService combat)
         {{
-            _app   = app;
-            _view  = view;
-            _input = input;
+            _app    = app;
+            _view   = view;
+            _input  = input;
+            _combat = combat;
             _app.OnDied += HandleDied;
         }}
 
-        // Called from {n}View.Update() — not from scene code directly.
+        // Gọi từ {n}View.Update() — không gọi trực tiếp từ scene code.
         public void OnUpdate(float deltaTime)
         {{
             if (_app.IsDead)
@@ -1151,19 +1337,30 @@ namespace BillGameCore.Modules.{n}.Presentation
                 return;
             }}
 
+            // FIX-03: Chỉ dùng CommandType enum và cast sang SharedPorts interface.
+            //         KHÔNG dùng kiểu MoveCommand/AttackCommand cụ thể (R06/R07).
             while (_input.TryDequeue(out ICommand cmd))
             {{
-                switch (cmd)
+                switch (cmd.Type)
                 {{
-                    case MoveCommand mv:
-                        _lastDirX = mv.DirX;
-                        _lastDirY = mv.DirY;
+                    case CommandType.Move:
+                        // Cast sang IMoveCommand (SharedPorts) để đọc DirX/Y (FIX-03).
+                        if (cmd is IMoveCommand mv)
+                        {{
+                            _lastDirX = mv.DirX;
+                            _lastDirY = mv.DirY;
+                        }}
                         break;
-                    case AttackCommand _:
-                        // TODO (Slice 03): call ICombatService.RequestAttack()
+
+                    case CommandType.Attack:
+                        // TODO Slice 03: gọi _combat?.RequestAttack(...)
+                        // if (cmd is IAttackCommand atk) {{ ... }}
                         break;
-                    case InteractCommand _:
-                        // Handled in OnTriggerEnter2D
+
+                    case CommandType.Interact:
+                        // FIX-09: Đặt flag, thực hiện IInteractable call trong OnTriggerEnter2D
+                        //         vì cần collider reference mới có ở đó.
+                        _pendingInteract = true;
                         break;
                 }}
             }}
@@ -1172,12 +1369,16 @@ namespace BillGameCore.Modules.{n}.Presentation
             _view.UpdateMoveAnimation(_lastDirX, _lastDirY);
         }}
 
-        // Called from {n}View.FixedUpdate() — physics write here, not in Update.
+        // Gọi từ {n}View.FixedUpdate() — write physics ở đây, không trong Update.
         public void OnFixedUpdate() => _view.SetVelocity(_app.VelocityX, _app.VelocityY);
 
-        // Called from {n}View.OnTriggerEnter2D() — R03 forward pattern.
+        // Gọi từ {n}View.OnTriggerEnter2D() — pattern forward R03.
+        // PlayerPresenter gọi GetComponent<IInteractable>() — không biết kiểu Binder (R07).
         public void OnTriggerEnter2D(Collider2D col)
         {{
+            // FIX-09: Chỉ thực hiện interact nếu có pending flag từ InteractCommand.
+            if (!_pendingInteract) return;
+            _pendingInteract = false;
             var interactable = col.GetComponent<IInteractable>();
             if (interactable != null && interactable.CanInteract())
                 interactable.Interact();
@@ -1185,7 +1386,12 @@ namespace BillGameCore.Modules.{n}.Presentation
 
         public void Dispose() => _app.OnDied -= HandleDied;
 
-        private void HandleDied(EntityId id) => OnDiedCallback?.Invoke(id);
+        // FIX-05: Lấy vị trí thực từ View (transform) thay vì Vector2.zero từ Application.
+        private void HandleDied(EntityId id, RewardBundle bundle, Vector2 _)
+        {{
+            var worldPos = _view != null ? _view.WorldPosition : Vector2.zero;
+            OnDiedCallback?.Invoke(id, bundle, worldPos);
+        }}
     }}
 }}");
 
@@ -1197,8 +1403,9 @@ using BillGameCore.Modules.{n}.Domain;
 
 namespace BillGameCore.Modules.{n}.Presentation
 {{
-    // Immutable handle for one live {n} instance.
-    // Returned by {n}Spawner. Call Dispose() to clean up event subscriptions.
+    // Handle bất biến cho một instance {n} đang sống.
+    // Trả về bởi {n}Spawner. Gọi Dispose() để dọn dẹp event subscription.
+    // R04: KHÔNG BAO GIỜ đăng ký vào DI scope — được sở hữu bởi GameBootstrapper / SceneController.
     public sealed class {n}Runtime : IDisposable
     {{
         public {n}Runtime(EntityId id, {n}Definition def, {n}State state,
@@ -1213,53 +1420,74 @@ namespace BillGameCore.Modules.{n}.Presentation
         }}
 
         public EntityId        Id          {{ get; }}
-        public {n}Definition  Definition  {{ get; }}
-        public {n}State       State       {{ get; }}
-        public {n}Application Application {{ get; }}
-        public {n}View        View        {{ get; }}
-        public {n}Presenter   Presenter   {{ get; }}
+        public {n}Definition   Definition  {{ get; }}
+        public {n}State        State       {{ get; }}
+        public {n}Application  Application {{ get; }}
+        public {n}View         View        {{ get; }}
+        public {n}Presenter    Presenter   {{ get; }}
 
         public void Dispose() => Presenter.Dispose();
     }}
 }}");
 
+        // FIX-04: Spawner chỉ dùng SharedPorts.Input.IInputCommandSource.
+        //         Không ref namespace Modules.Input (R06/R07).
+        // FIX-08: Using namespace Infrastructure.Config đúng với sub-folder.
         Write($"Scripts/Modules/{n}/Presentation/{n}Spawner.cs",
-$@"using EntityId = BillGameCore.Core.ValueObjects.EntityId;
+$@"using BillGameCore.Core.Rewards;
 using BillGameCore.Modules.{n}.Application;
 using BillGameCore.Modules.{n}.Domain;
-using BillGameCore.Modules.{n}.Infrastructure;
+using BillGameCore.Modules.{n}.Infrastructure.Config;
 using BillGameCore.SharedPorts.Input;
+using System;
 using UnityEngine;
+using EntityId = BillGameCore.Core.ValueObjects.EntityId;
 
 namespace BillGameCore.Modules.{n}.Presentation
 {{
-    // Registered in SceneLifetimeScope.
-    // Receives prefab, config, and IInputCommandSource via DI constructor injection.
-    // Creates per-entity Runtime — NEVER registers it back into DI (R04).
-    // R18: EntityId.New() is called here — the ONLY valid location for this entity type.
+    // Đăng ký trong SceneLifetimeScope.
+    // Nhận prefab, config và IInputCommandSource qua DI constructor injection.
+    // Tạo Runtime per-entity — KHÔNG BAO GIỜ đăng ký ngược lại vào DI (R04).
+    // R18: EntityId.New() được gọi tại đây — vị trí DUY NHẤT hợp lệ cho entity type này.
+    // FIX-04: Không tham chiếu BillGameCore.Modules.Input — chỉ dùng SharedPorts (R06/R07).
+    // FIX-08: Using BillGameCore.Modules.{n}.Infrastructure.Config cho {n}Config.
+    // FIX-11: rewardBundleFactory truyền vào {n}Application để tránh protected virtual (sealed).
     public sealed class {n}Spawner
     {{
-        private readonly {n}View          _prefab;
-        private readonly {n}Config        _config;
+        private readonly {n}View             _prefab;
+        private readonly {n}Config           _config;
         private readonly IInputCommandSource _inputSource;
 
+        // FIX-11: Factory tạo RewardBundle — truyền null nếu entity không drop loot (e.g. Player).
+        //         Enemy Spawner ghi đè factory này với lambda lấy loot từ EnemyDefinition.
+        private readonly Func<RewardBundle> _rewardBundleFactory;
+
+        // Constructor cho Player hoặc entity không drop loot.
         public {n}Spawner({n}View prefab, {n}Config config, IInputCommandSource inputSource)
+            : this(prefab, config, inputSource, null) {{ }}
+
+        // Constructor cho Enemy hoặc entity có drop loot.
+        public {n}Spawner({n}View prefab, {n}Config config,
+                          IInputCommandSource inputSource, Func<RewardBundle> rewardBundleFactory)
         {{
-            _prefab      = prefab;
-            _config      = config;
-            _inputSource = inputSource;
+            _prefab              = prefab;
+            _config              = config;
+            _inputSource         = inputSource;
+            _rewardBundleFactory = rewardBundleFactory;
         }}
 
         public {n}Runtime Spawn(Vector2 position)
         {{
-            var id   = EntityId.New();                 // R18
-            var def  = _config.ToDefinition();
-            var state= new {n}State();
-            var app  = new {n}Application(id, def, state);
+            var id    = EntityId.New();                    // R18
+            var def   = _config.ToDefinition();
+            var state = new {n}State();
 
-            // R17: Object.Instantiate is correct here because {n}View has no [Inject] fields.
-            // If you add [Inject] to {n}View later, switch to container.Instantiate().
-            var view      = Object.Instantiate(_prefab, position, Quaternion.identity);
+            // FIX-11: Truyền factory vào Application — không dùng protected virtual.
+            var app   = new {n}Application(id, def, state, _rewardBundleFactory);
+
+            // R17: Object.Instantiate đúng ở đây vì {n}View không có [Inject] field.
+            // Nếu thêm [Inject] vào {n}View sau này, đổi sang container.Instantiate().
+            var view      =  UnityEngine.Object.Instantiate(_prefab, position, Quaternion.identity);
             var presenter = new {n}Presenter(app, view, _inputSource);
             view.Bind(presenter);
 
@@ -1269,20 +1497,22 @@ namespace BillGameCore.Modules.{n}.Presentation
 }}");
 
         // Infrastructure ──────────────────────────────────
+        // FIX-08: Namespace khớp với sub-folder Infrastructure/Config/.
         Write($"Scripts/Modules/{n}/Infrastructure/Config/{n}Config.cs",
 $@"using BillGameCore.Modules.{n}.Domain;
 using UnityEngine;
 
-namespace BillGameCore.Modules.{n}.Infrastructure
+namespace BillGameCore.Modules.{n}.Infrastructure.Config
 {{
     // ScriptableObject config mapper.
-    // R10: Static config data ONLY — no runtime state, no mutable fields.
+    // R10: CHỈ chứa config data tĩnh — không có runtime state, không có mutable field.
     [CreateAssetMenu(fileName = ""{n}Config"", menuName = ""BillGameCore/{n}/{n} Config"")]
     public sealed class {n}Config : ScriptableObject
     {{
         [SerializeField] private float _moveSpeed  = 5f;
         [SerializeField] private float _maxHealth  = 100f;
         [SerializeField] private float _maxStamina = 100f;
+        // Thêm serialized config field khớp với {n}Definition.
 
         public {n}Definition ToDefinition() => new {n}Definition
         {{
@@ -1293,13 +1523,15 @@ namespace BillGameCore.Modules.{n}.Infrastructure
     }}
 }}");
 
+        // FIX-04: Asmdef không còn ref BillGameCore.Modules.Input.
+        //         IInputCommandSource nằm trong SharedPorts — ref đó là đủ.
         WriteAsmdef($"Scripts/Modules/{n}", $"BillGameCore.Modules.{n}",
-            new[] { "BillGameCore.Core", "BillGameCore.SharedPorts",
-                    "BillGameCore.Modules.Input", "VContainer" }, editorOnly: false);
+            new[] { "BillGameCore.Core", "BillGameCore.SharedPorts", "VContainer" },
+            editorOnly: false);
     }
 
     // ═══════════════════════════════════════════════════════
-    //  INTERACTION GROUP ARCHETYPE
+    //  ARCHETYPE INTERACTION GROUP
     // ═══════════════════════════════════════════════════════
 
     static void CreateInteractionGroupModule(string firstName)
@@ -1326,19 +1558,19 @@ namespace BillGameCore.Modules.{n}.Infrastructure
         Write($"Scripts/Modules/InteractionGroup/{n}/Domain/{n}Definition.cs",
 $@"namespace BillGameCore.Modules.InteractionGroup.{n}.Domain
 {{
-    // R15: Pure C# — no UnityEngine.
+    // R15: Thuần C# — không có UnityEngine.
     [System.Serializable]
     public sealed class {n}Definition
     {{
         public bool StartsActivated;
-        // Add interaction-specific config data.
+        // Thêm config data đặc thù của interaction ở đây.
     }}
 }}");
 
         Write($"Scripts/Modules/InteractionGroup/{n}/Domain/{n}State.cs",
 $@"namespace BillGameCore.Modules.InteractionGroup.{n}.Domain
 {{
-    // R15: Pure C#.  R10: Not in ScriptableObject.  R04: Not in DI scope.
+    // R15: Thuần C#.  R10: Không trong ScriptableObject.  R04: Không trong DI scope.
     public sealed class {n}State
     {{
         public bool IsActivated {{ get; set; }}
@@ -1351,7 +1583,7 @@ using BillGameCore.Modules.InteractionGroup.{n}.Domain;
 
 namespace BillGameCore.Modules.InteractionGroup.{n}.Application
 {{
-    // R15: Pure C# — no UnityEngine.
+    // R15: Thuần C# — không có UnityEngine.
     public sealed class {n}Application
     {{
         private readonly {n}State _state;
@@ -1389,7 +1621,7 @@ $@"using UnityEngine;
 
 namespace BillGameCore.Modules.InteractionGroup.{n}.Presentation
 {{
-    // R03: Drives Animator only — no business logic.
+    // R03: Chỉ drive Animator — không có business logic.
     public sealed class {n}View : MonoBehaviour
     {{
         [SerializeField] private Animator _animator;
@@ -1405,6 +1637,8 @@ using BillGameCore.Modules.InteractionGroup.{n}.Application;
 
 namespace BillGameCore.Modules.InteractionGroup.{n}.Presentation
 {{
+    // Bridge {n}Application event → {n}View animation.
+    // Được tạo bởi {n}Binder trong Awake.
     public sealed class {n}Presenter : IDisposable
     {{
         private readonly {n}Application _app;
@@ -1428,29 +1662,29 @@ namespace BillGameCore.Modules.InteractionGroup.{n}.Presentation
     }}
 }}");
 
-        // Binder: implements IInteractable — PlayerPresenter sees ONLY IInteractable (R07).
+        // Binder: implement IInteractable — PlayerPresenter CHỈ thấy IInteractable (R07).
         Write($"Scripts/Modules/InteractionGroup/{n}/Presentation/{n}Binder.cs",
 $@"using BillGameCore.Core.Interaction;
 using BillGameCore.Modules.InteractionGroup.{n}.Application;
 using BillGameCore.Modules.InteractionGroup.{n}.Domain;
-using BillGameCore.Modules.InteractionGroup.{n}.Infrastructure;
+using BillGameCore.Modules.InteractionGroup.{n}.Infrastructure.Config;
 using UnityEngine;
 
 namespace BillGameCore.Modules.InteractionGroup.{n}.Presentation
 {{
-    // Placed on the {n} world prefab. Implements IInteractable.
-    // PlayerPresenter calls GetComponent<IInteractable>() — never knows this type (R07).
-    // Binder self-constructs Application/State/Presenter in Awake — NOT via DI (R04).
+    // Gắn trên prefab {n} trong scene. Implement IInteractable (Core).
+    // PlayerPresenter gọi GetComponent<IInteractable>() — không bao giờ biết type này (R07).
+    // Binder tự tạo Application/State/Presenter trong Awake — KHÔNG qua DI (R04).
     //
-    // R17 IMPORTANT: if you add [VContainer.Inject] fields (e.g. IInventoryWriteService),
-    //   you MUST instantiate this prefab via container.Instantiate(), not Object.Instantiate().
+    // QUAN TRỌNG R17: Nếu thêm [VContainer.Inject] field (ví dụ IInventoryWriteService),
+    //   BẮT BUỘC instantiate prefab qua container.Instantiate(), không dùng Object.Instantiate().
     public sealed class {n}Binder : MonoBehaviour, IInteractable
     {{
         [SerializeField] private {n}View   _view;
         [SerializeField] private {n}Config _config;
 
-        // Add [VContainer.Inject] service fields here if needed.
-        // Remember to switch to container.Instantiate() in the spawner (R17).
+        // Thêm [VContainer.Inject] service field ở đây nếu cần.
+        // Nhớ đổi sang container.Instantiate() trong spawner (R17).
 
         private {n}Application _app;
         private {n}Presenter   _presenter;
@@ -1460,8 +1694,8 @@ namespace BillGameCore.Modules.InteractionGroup.{n}.Presentation
             if (_view == null) _view = GetComponent<{n}View>();
             var def   = _config != null ? _config.ToDefinition() : new {n}Definition();
             var state = new {n}State();
-            _app      = new {n}Application(def, state);
-            _presenter= new {n}Presenter(_app, _view);
+            _app       = new {n}Application(def, state);
+            _presenter = new {n}Presenter(_app, _view);
 
             if (_app.IsActivated) _view.PlayActivated();
         }}
@@ -1471,20 +1705,21 @@ namespace BillGameCore.Modules.InteractionGroup.{n}.Presentation
         public void Interact()
         {{
             _presenter?.TryActivate();
-            // Add service calls here (e.g. _inventory.AddItem(...)) after adding [Inject].
+            // Thêm service call ở đây (ví dụ _inventory.AddItem(...)) sau khi thêm [Inject].
         }}
 
         private void OnDestroy() => _presenter?.Dispose();
     }}
 }}");
 
+        // FIX-08: Namespace khớp với sub-folder Infrastructure/Config/.
         Write($"Scripts/Modules/InteractionGroup/{n}/Infrastructure/Config/{n}Config.cs",
 $@"using BillGameCore.Modules.InteractionGroup.{n}.Domain;
 using UnityEngine;
 
-namespace BillGameCore.Modules.InteractionGroup.{n}.Infrastructure
+namespace BillGameCore.Modules.InteractionGroup.{n}.Infrastructure.Config
 {{
-    // R10: Config data only — no runtime state.
+    // R10: Chỉ chứa config data — không có runtime state.
     [CreateAssetMenu(fileName = ""{n}Config"", menuName = ""BillGameCore/Interaction/{n} Config"")]
     public sealed class {n}Config : ScriptableObject
     {{
@@ -1499,7 +1734,7 @@ namespace BillGameCore.Modules.InteractionGroup.{n}.Infrastructure
     }
 
     // ═══════════════════════════════════════════════════════
-    //  SYSTEM / SERVICE ARCHETYPE
+    //  ARCHETYPE SYSTEM / SERVICE
     // ═══════════════════════════════════════════════════════
 
     static void CreateSystemModule(string n)
@@ -1516,11 +1751,11 @@ namespace BillGameCore.Modules.InteractionGroup.{n}.Infrastructure
         Write($"Scripts/Modules/{n}/Domain/{n}State.cs",
 $@"namespace BillGameCore.Modules.{n}.Domain
 {{
-    // Runtime state owned exclusively by {n}Service.
-    // R04: Never in DI scope.  R10: Not in ScriptableObject.  R15: Pure C#.
+    // Trạng thái runtime được sở hữu độc quyền bởi {n}Service.
+    // R04: Không vào DI scope.  R10: Không trong ScriptableObject.  R15: Thuần C#.
     public sealed class {n}State
     {{
-        // Add runtime state fields here.
+        // Thêm field trạng thái runtime ở đây.
     }}
 }}");
 
@@ -1528,64 +1763,64 @@ $@"namespace BillGameCore.Modules.{n}.Domain
 $@"using System;
 using BillGameCore.Core.Save;
 using BillGameCore.Modules.{n}.Domain;
-using BillGameCore.Modules.{n}.Infrastructure;
+using BillGameCore.Modules.{n}.Infrastructure.Persistence;
 
 namespace BillGameCore.Modules.{n}.Application
 {{
     // System service.
-    // ADR-06: register in ProjectLifetimeScope (Save/Inventory/Economy/Audio)
-    //         or SceneLifetimeScope for scene-only services.
-    // R07: consuming modules inject a SharedPorts interface — never this class directly.
-    // R04: {n}State is created here, not injected from outside.
+    // ADR-06: đăng ký trong ProjectLifetimeScope (Save/Inventory/Economy/Audio)
+    //         hoặc SceneLifetimeScope cho service chỉ sống trong một scene.
+    // R07: module khác inject interface SharedPorts — không bao giờ ref class này trực tiếp.
+    // R04: {n}State được tạo ngay tại đây, không inject từ ngoài.
     public sealed class {n}Service
         : ISaveSnapshotProvider<{n}SaveData>,
           ISaveSnapshotConsumer<{n}SaveData>
     {{
         private readonly {n}State _state = new {n}State();
 
-        // Notify local UI presenters — not for cross-module broadcast (use MessagePipe for that).
+        // Thông báo cho UI Presenter cục bộ — không dùng cho cross-module broadcast (dùng MessagePipe).
         public event Action Changed;
 
         // ── ISaveSnapshotProvider ──────────────────────────
         public {n}SaveData CreateSnapshot()
         {{
-            return new {n}SaveData(); // populate from _state fields
+            return new {n}SaveData(); // điền từ các field của _state
         }}
 
         // ── ISaveSnapshotConsumer ──────────────────────────
         public void RestoreSnapshot({n}SaveData snapshot)
         {{
             if (snapshot == null) return;
-            // Restore _state from snapshot.
+            // Khôi phục _state từ các field trong snapshot.
             Changed?.Invoke();
         }}
 
-        // Add command/query methods here.
-        // Expose narrow interfaces in SharedPorts/ for other modules to consume.
+        // Thêm command/query method ở đây.
+        // Khai báo interface hẹp trong SharedPorts/ cho module khác consume (R07).
     }}
 }}");
 
         Write($"Scripts/Modules/{n}/Infrastructure/Config/{n}Settings.cs",
 $@"using UnityEngine;
 
-namespace BillGameCore.Modules.{n}.Infrastructure
+namespace BillGameCore.Modules.{n}.Infrastructure.Config
 {{
-    // R10: Static config data only.
+    // R10: Chỉ chứa config data tĩnh.
     [CreateAssetMenu(fileName = ""{n}Settings"", menuName = ""BillGameCore/{n}/{n} Settings"")]
     public sealed class {n}Settings : ScriptableObject
     {{
-        // Add serialized config fields.
+        // Thêm serialized config field ở đây.
     }}
 }}");
 
         Write($"Scripts/Modules/{n}/Infrastructure/Persistence/{n}SaveData.cs",
-$@"namespace BillGameCore.Modules.{n}.Infrastructure
+$@"namespace BillGameCore.Modules.{n}.Infrastructure.Persistence
 {{
-    // Serializable save DTO — snapshot of {n}State.  NOT a live state object.
+    // DTO save serializable — snapshot của {n}State. KHÔNG phải live state object.
     [System.Serializable]
     public sealed class {n}SaveData
     {{
-        // Mirror {n}State fields as serializable types.
+        // Mirror các field của {n}State sang kiểu serializable.
     }}
 }}");
 
@@ -1593,139 +1828,6 @@ $@"namespace BillGameCore.Modules.{n}.Infrastructure
             new[] { "BillGameCore.Core", "BillGameCore.SharedPorts", "VContainer" },
             editorOnly: false);
     }
-
-    // ═══════════════════════════════════════════════════════
-    //  INTEGRATION STEP MESSAGES
-    // ═══════════════════════════════════════════════════════
-
-    static string BuildInputSteps() =>
-@"<b>Slice 01 — Input  (Full Command Pattern)</b>
-
-<b>1. Unity Editor — enable New Input System</b>
-   Project Settings → Player → Active Input Handling = ""Input System Package (New)""
-   Restart Editor when prompted.
-
-<b>2. Create InputActions asset</b>
-   Right-click in Project → Create → Input Actions → name ""InputActions""
-   Add ActionMaps:
-     Player  → Move (Value/Vector2/WASD+LeftStick), Attack (Button), Interact (Button/E)
-     Vehicle → Throttle (Value/float), Steer (Value/float), Exit (Button)
-     UI      → use Unity default bindings
-   Enable 'Generate C# Class' if you prefer typed access (optional).
-   Save asset.
-
-<b>3. Scene setup</b>
-   Create empty GameObject ""InputReader"" in scene.
-   Attach InputReader.cs to it.
-   Attach PlayerInput component to same GO → assign InputActions asset.
-   Drag PlayerInput reference into InputReader.cs _playerInput slot.
-
-<b>4. SceneLifetimeScope — add inside Configure():</b>
-   builder.Register&lt;CommandBuffer&gt;(Lifetime.Singleton);
-   builder.Register&lt;InputCommandDispatcher&gt;(Lifetime.Singleton).As&lt;IInputCommandSource&gt;();
-   builder.RegisterComponent(inputReaderRef);   // drag InputReader GO into Inspector slot
-
-<b>5. BillGameCore.Composition.asmdef — add reference:</b>
-   ""BillGameCore.Modules.Input""
-
-<b>6. Test</b>
-   Play → in InputCommandDispatcher.TryDequeue add Debug.Log(command.Type)
-   → verify MoveCommand appears when pressing WASD.
-
-<color=orange>ADR-02: Each ICommand carries SourceId (EntityId).
-Call InputReader.SetControlledEntity(runtime.Id) from GameBootstrapper after player spawns.</color>";
-
-    static string BuildEntitySteps(string n) =>
-$@"<b>Entity slice '{n}'</b>
-
-<b>1. Create Unity assets</b>
-   Right-click Data/Settings → Create → BillGameCore/{n}/{n} Config → fill stats.
-   Create prefab '{n}':
-     Add Sprite + Rigidbody2D (Gravity Scale = 0 for top-down) + Collider2D.
-     Attach {n}View.cs to prefab root.
-     Create Animator Controller with states: Idle / Walk / Attack / Die.
-     Assign Controller to Animator component.
-
-<b>2. SceneLifetimeScope — add inside Configure():</b>
-   builder.Register&lt;{n}Spawner&gt;(Lifetime.Scoped);
-   builder.RegisterInstance({n.ToLower()}ConfigRef);        // drag SO asset into slot
-   builder.RegisterInstance({n.ToLower()}ViewPrefabRef);    // drag prefab into slot
-   (IInputCommandSource already registered from Slice 01 — auto-injected into {n}Spawner.)
-
-<b>3. GameBootstrapper — wire startup:</b>
-   // Inject {n}Spawner and InputReader via constructor.
-   var runtime = _{n.ToLower()}Spawner.Spawn(Vector2.zero);
-   _inputReader.SetControlledEntity(runtime.Id);
-
-<b>4. BillGameCore.Composition.asmdef — add reference:</b>
-   ""BillGameCore.Modules.{n}""
-
-<b>5. Test</b>
-   Play → {n} moves with WASD.
-
-<color=orange>R04: {n}Runtime is owned by caller (GameBootstrapper) — NEVER put it in DI scope.
-R18: EntityId.New() is called inside {n}Spawner.Spawn() — the only valid location.</color>";
-
-    static string BuildInteractionSteps(string n) =>
-$@"<b>InteractionGroup — first type '{n}'</b>
-
-<b>1. Create Unity assets</b>
-   Right-click Data/Settings → Create → BillGameCore/Interaction/{n} Config.
-   Create prefab '{n}':
-     Add Sprite + Collider2D (Is Trigger = TRUE) + Animator.
-     Attach {n}View.cs and {n}Binder.cs to root.
-     In {n}Binder Inspector: drag {n}View and {n}Config references.
-
-<b>2. DI registration</b>
-   Base case (no injected services): no DI registration needed.
-   {n}Binder self-constructs everything in Awake.
-
-   If {n}Binder needs an injected service (e.g. IInventoryWriteService):
-     Add [VContainer.Inject] field to {n}Binder.
-     Instantiate via container.Instantiate(_prefab, pos, rot) in the spawner — NOT Object.Instantiate (R17).
-
-<b>3. PlayerPresenter wiring (already done)</b>
-   PlayerPresenter.OnTriggerEnter2D calls GetComponent&lt;IInteractable&gt;().
-   PlayerPresenter does NOT know {n}Binder exists (R07).
-
-<b>4. BillGameCore.Composition.asmdef — add reference:</b>
-   ""BillGameCore.Modules.InteractionGroup""
-
-<b>5. Test</b>
-   Play → Player walks into {n} prefab → {n}Binder.Interact() fires → Animator plays Activate.
-
-<b>Adding more types later:</b>
-   Menu: BillGameCore / New Module / Add Interaction Type to Group
-   All types share BillGameCore.Modules.InteractionGroup.asmdef.";
-
-    static string BuildSystemSteps(string n) =>
-$@"<b>System slice '{n}'</b>
-
-<b>1. Decide lifetime scope (ADR-06)</b>
-   ProjectLifetimeScope → survives scene loads: Inventory, Economy, Save, Audio
-   SceneLifetimeScope   → scene-only services
-
-<b>2. Register in chosen scope:</b>
-   builder.Register&lt;{n}Service&gt;(Lifetime.Singleton).AsImplementedInterfaces();
-   // AsImplementedInterfaces() exposes all SharedPorts interfaces {n}Service implements.
-
-<b>3. Add narrow port interfaces to SharedPorts</b>
-   Create interface files in Scripts/SharedPorts/... for what other modules need.
-   e.g. IInventoryReadService, IInventoryWriteService
-   {n}Service implements them; consuming modules inject the interface.
-
-<b>4. BillGameCore.Composition.asmdef — add reference:</b>
-   ""BillGameCore.Modules.{n}""
-
-<b>5. Save wiring (Slice 07)</b>
-   {n}Service already implements ISaveSnapshotProvider/Consumer.
-   Register SaveService to collect snapshots from all providers.
-
-<b>6. Test</b>
-   Play → call service method → verify state via Debug.Log or UI.
-
-<color=orange>R07: Other modules inject the SharedPorts interface — NEVER reference {n}Service directly.
-R04: {n}State is created inside {n}Service — not registered in DI scope.</color>";
 
     // ═══════════════════════════════════════════════════════
     //  UTILITIES
@@ -1784,8 +1886,8 @@ R04: {n}State is created inside {n}Service — not registered in DI scope.</colo
     static bool ValidateName(string name)
     {
         if (!string.IsNullOrEmpty(name)) return true;
-        EditorUtility.DisplayDialog("Invalid Name",
-            "Module name must contain at least one letter or digit.", "OK");
+        EditorUtility.DisplayDialog("Tên không hợp lệ",
+            "Tên module phải chứa ít nhất một chữ cái hoặc chữ số.", "OK");
         return false;
     }
 
@@ -1832,9 +1934,9 @@ public sealed class InputDialog : EditorWindow
         EditorGUI.FocusTextInControl("F");
         GUILayout.Space(8f);
         GUILayout.BeginHorizontal();
-        if (GUILayout.Button("Cancel")) Close();
+        if (GUILayout.Button("Hủy")) Close();
         bool enter = Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Return;
-        if (GUILayout.Button("Create") || enter) { _result = _input; Close(); }
+        if (GUILayout.Button("Tạo") || enter) { _result = _input; Close(); }
         GUILayout.EndHorizontal();
     }
 }
@@ -1867,7 +1969,7 @@ public sealed class StepsWindow : EditorWindow
         _box ??= new GUIStyle("HelpBox") { padding = new RectOffset(14, 14, 14, 14) };
 
         GUILayout.Space(8f);
-        GUILayout.Label("Integration Steps  —  complete these before wiring DI", EditorStyles.boldLabel);
+        GUILayout.Label("Các bước tích hợp  —  hoàn thành trước khi wire DI", EditorStyles.boldLabel);
         GUILayout.Space(6f);
         _scroll = GUILayout.BeginScrollView(_scroll);
         GUILayout.BeginVertical(_box);
@@ -1875,11 +1977,11 @@ public sealed class StepsWindow : EditorWindow
         GUILayout.EndVertical();
         GUILayout.EndScrollView();
         GUILayout.Space(8f);
-        if (GUILayout.Button("Copy to Clipboard", GUILayout.Height(28f)))
+        if (GUILayout.Button("Sao chép vào Clipboard", GUILayout.Height(28f)))
         {
             EditorGUIUtility.systemCopyBuffer =
                 System.Text.RegularExpressions.Regex.Replace(_content, "<.*?>", string.Empty);
-            Debug.Log("[BillGameCore] Steps copied to clipboard.");
+            Debug.Log("[BillGameCore] Đã sao chép các bước vào clipboard.");
         }
         GUILayout.Space(6f);
     }

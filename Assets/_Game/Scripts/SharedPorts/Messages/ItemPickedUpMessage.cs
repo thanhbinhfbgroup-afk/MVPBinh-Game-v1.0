@@ -2,7 +2,7 @@
 
 namespace BillGameCore.SharedPorts.Messages
 {
-    // Published by LootItemBinder after a successful pickup (Slice 03+).
+    // Publish bởi LootItemBinder sau khi nhặt item thành công (Slice 03+).
     public sealed class ItemPickedUpMessage
     {
         public ItemStack Stack { get; }

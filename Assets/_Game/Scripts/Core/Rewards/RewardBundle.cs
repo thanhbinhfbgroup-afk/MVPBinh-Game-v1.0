@@ -2,8 +2,8 @@
 
 namespace BillGameCore.Core.Rewards
 {
-    // Emitted by EnemyApplication.OnDied.
-    // Consumed by SceneController → LootSpawner + IRewardGrantService.
+    // Được emit bởi EnemyApplication.OnDied.
+    // Được tiêu thụ bởi SceneController → LootSpawner + IRewardGrantService.
     public sealed class RewardBundle
     {
         public int         Gold       = 0;

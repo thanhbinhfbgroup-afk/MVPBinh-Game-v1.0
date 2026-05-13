@@ -1,11 +1,11 @@
 ﻿using UnityEngine;
 
-namespace BillGameCore.Modules.Inventory.Infrastructure
+namespace BillGameCore.Modules.Inventory.Infrastructure.Config
 {
-    // R10: Static config data only.
+    // R10: Chỉ chứa config data tĩnh.
     [CreateAssetMenu(fileName = "InventorySettings", menuName = "BillGameCore/Inventory/Inventory Settings")]
     public sealed class InventorySettings : ScriptableObject
     {
-        // Add serialized config fields.
+        // Thêm serialized config field ở đây.
     }
 }

@@ -1,10 +1,10 @@
 ﻿namespace BillGameCore.Modules.Player.Domain
 {
-    // Mutable runtime state for ONE Player instance.
-    // Owned and mutated exclusively by PlayerApplication.
-    // R04: NEVER registered in DI scope.
-    // R10: NEVER stored in ScriptableObject.
-    // R15: Pure C# — NO UnityEngine types.
+    // Trạng thái runtime có thể thay đổi cho MỘT instance Player.
+    // Chỉ được sở hữu và thay đổi bởi PlayerApplication.
+    // R04: KHÔNG BAO GIỜ đăng ký vào DI scope.
+    // R10: KHÔNG BAO GIỜ lưu trong ScriptableObject.
+    // R15: Thuần C# — KHÔNG có UnityEngine types.
     public sealed class PlayerState
     {
         public float CurrentHealth  { get; set; }
@@ -12,6 +12,6 @@
         public float VelocityX      { get; set; }
         public float VelocityY      { get; set; }
         public bool  IsDead         { get; set; }
-        // Add entity-specific runtime fields here.
+        // Thêm trường runtime đặc thù của entity ở đây.
     }
 }

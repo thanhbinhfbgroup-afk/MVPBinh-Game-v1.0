@@ -2,8 +2,8 @@
 
 namespace BillGameCore.Modules.Player.Presentation
 {
-    // Unity-facing visual output for Player.
-    // R03: MonoBehaviour callbacks ONLY forward to Presenter — ZERO business logic here.
+    // Output visual phía Unity cho Player.
+    // R03: MonoBehaviour callback CHỈ forward sang Presenter — KHÔNG có business logic nào ở đây.
     [RequireComponent(typeof(Rigidbody2D))]
     public sealed class PlayerView : MonoBehaviour
     {
@@ -12,17 +12,17 @@ namespace BillGameCore.Modules.Player.Presentation
         private Rigidbody2D  _rb;
         private PlayerPresenter _presenter;
 
-        private void Awake() => _rb = GetComponent<Rigidbody2D>(); // self-GetComponent is allowed
+        private void Awake() => _rb = GetComponent<Rigidbody2D>(); // GetComponent trên self được phép
 
-        // Called once by PlayerSpawner immediately after Instantiate.
+        // Gọi một lần bởi PlayerSpawner ngay sau Instantiate.
         public void Bind(PlayerPresenter presenter) => _presenter = presenter;
 
-        // R03: forward only ──────────────────────────────
+        // R03: chỉ forward ──────────────────────────────────
         private void Update()                         => _presenter?.OnUpdate(Time.deltaTime);
         private void FixedUpdate()                    => _presenter?.OnFixedUpdate();
         private void OnTriggerEnter2D(Collider2D col) => _presenter?.OnTriggerEnter2D(col);
 
-        // View write methods — called by Presenter only ──
+        // Các method write của View — chỉ được gọi bởi Presenter ──────
         public void SetVelocity(float vx, float vy)
         {
             if (_rb) _rb.linearVelocity = new Vector2(vx, vy);
@@ -37,5 +37,8 @@ namespace BillGameCore.Modules.Player.Presentation
         }
 
         public void PlayDeath() { if (_animator) _animator.SetTrigger("Die"); }
+
+        // Vị trí thế giới thực — Presenter dùng khi emit OnDied (FIX-05).
+        public Vector2 WorldPosition => transform.position;
     }
 }

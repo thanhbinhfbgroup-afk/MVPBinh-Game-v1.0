@@ -1,20 +1,19 @@
 ﻿using BillGameCore.Core.Rewards;
+using UnityEngine;
 
 namespace BillGameCore.SharedPorts.Messages
 {
-    // Published by EnemyPresenter from Slice 03+ (MessagePipe unlock — ADR-03).
-    // Consumed by LootSpawner and/or SceneController subscribers.
+    // Publish bởi EnemyPresenter từ Slice 03+ (MessagePipe unlock — ADR-03).
+    // Tiêu thụ bởi LootSpawner và/hoặc SceneController subscriber.
     public sealed class EnemyDiedMessage
     {
-        public RewardBundle Bundle { get; }
-        public float        WorldX { get; }
-        public float        WorldY { get; }
+        public RewardBundle Bundle   { get; }
+        public Vector2      Position { get; }
 
-        public EnemyDiedMessage(RewardBundle bundle, float worldX, float worldY)
+        public EnemyDiedMessage(RewardBundle bundle, Vector2 position)
         {
-            Bundle = bundle;
-            WorldX = worldX;
-            WorldY = worldY;
+            Bundle   = bundle;
+            Position = position;
         }
     }
 }

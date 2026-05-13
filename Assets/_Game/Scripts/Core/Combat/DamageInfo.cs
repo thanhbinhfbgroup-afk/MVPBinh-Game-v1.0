@@ -2,8 +2,8 @@
 
 namespace BillGameCore.Core.Combat
 {
-    // Built by CombatApplication. Passed to IDamageReceiver.ReceiveDamage().
-    // Pure C# — NO UnityEngine references allowed in Core.
+    // Được tạo bởi CombatApplication. Truyền vào IDamageReceiver.ReceiveDamage().
+    // Thuần C# — KHÔNG có UnityEngine reference trong Core.
     public readonly struct DamageInfo
     {
         public DamageInfo(float amount, EntityId sourceId, bool isCritical = false)

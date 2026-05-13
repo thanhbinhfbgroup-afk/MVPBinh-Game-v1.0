@@ -1,9 +1,9 @@
-﻿namespace BillGameCore.Modules.Inventory.Infrastructure
+﻿namespace BillGameCore.Modules.Inventory.Infrastructure.Persistence
 {
-    // Serializable save DTO — snapshot of InventoryState.  NOT a live state object.
+    // DTO save serializable — snapshot của InventoryState. KHÔNG phải live state object.
     [System.Serializable]
     public sealed class InventorySaveData
     {
-        // Mirror InventoryState fields as serializable types.
+        // Mirror các field của InventoryState sang kiểu serializable.
     }
 }
