@@ -15,6 +15,11 @@ namespace BillGameCore.Scenes
     // Scene-specific DI scope. Lives in Scenes to avoid Composition -> Scenes asmdef cycles.
     public sealed class BootstrapSceneLifetimeScope : LifetimeScope
     {
+        // VContainer should not resolve primitive constructor parameters.
+        // Keep command buffer capacity owned by the scene scope until a real
+        // InputSettings asset exists.
+        private const int InputCommandBufferSize = 32;
+
         [Header("Scene Components")]
         [SerializeField] private InputReader _inputReader;
         [SerializeField] private SceneController _sceneController;
@@ -31,7 +36,7 @@ namespace BillGameCore.Scenes
         {
             ValidateRequiredReferences();
 
-            builder.Register<CommandBuffer>(Lifetime.Scoped);
+            builder.Register(_ => new CommandBuffer(InputCommandBufferSize), Lifetime.Scoped);
             builder.Register<InputCommandDispatcher>(Lifetime.Scoped).As<IInputCommandSource>();
 
             builder.RegisterComponent(_inputReader);

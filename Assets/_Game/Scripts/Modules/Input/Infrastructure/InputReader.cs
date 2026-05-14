@@ -1,6 +1,9 @@
-﻿using BillGameCore.Modules.Input.Commands;
-using BillGameCore.Modules.Input.Context;
+using BillGameCore.Modules.Input.Commands;
 using BillGameCore.SharedPorts.Input;
+using System;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 using UnityEngine;
 using UnityEngine.InputSystem;
 using VContainer;
@@ -8,92 +11,138 @@ using EntityId = BillGameCore.Core.ValueObjects.EntityId;
 
 namespace BillGameCore.Modules.Input.Infrastructure
 {
-    // MonoBehaviour — dịch event New Input System thành ICommand object.
-    // R03: Không có business logic — chỉ raw-input → Command translation.
-    // R16: Đây là class DUY NHẤT được phép gọi CommandBuffer.Enqueue().
-    // R17: Đăng ký qua builder.RegisterComponent<InputReader>() — VContainer resolve [Inject].
+    // MonoBehaviour adapter: raw Unity input -> command objects.
+    // R16: This is the only class allowed to enqueue commands.
     public sealed class InputReader : MonoBehaviour
     {
-        [Inject] private CommandBuffer _buffer; // được inject bởi VContainer
+#if UNITY_EDITOR
+        // Editor-only safety net for the approved baseline scene.
+        // Runtime ownership is still the serialized _actions field; when multiple
+        // scenes/input assets exist, assign _actions explicitly per scene.
+        private const string DefaultActionsAssetPath = "Assets/Settings/InputSystem_Actions.inputactions";
+#endif
 
-        [SerializeField] private PlayerInput _playerInput; // gắn trong Inspector
+        [Inject] private CommandBuffer _buffer;
 
-        private EntityId     _controlledEntityId = EntityId.Invalid;
-        private InputContext _currentContext      = InputContext.Player;
+        [SerializeField] private InputActionAsset _actions;
 
-        // Trạng thái giữ nút Attack
-        private bool  _attackHeld;
+        private EntityId _controlledEntityId = EntityId.Invalid;
+        private InputContext _currentContext = InputContext.Player;
+        private InputActionGateway _gateway;
+
+        private bool _attackHeld;
         private float _attackHeldStart;
 
-        // Gọi bởi GameBootstrapper sau khi PlayerSpawner.Spawn() trả về Runtime.
         public void SetControlledEntity(EntityId id) => _controlledEntityId = id;
 
         public void ValidateConfiguration()
         {
-            if (_playerInput == null)
-                throw new System.InvalidOperationException($"{nameof(InputReader)} requires a PlayerInput reference.");
-            if (_playerInput.actions == null)
-                throw new System.InvalidOperationException($"{nameof(InputReader)} requires PlayerInput.actions.");
-
-            var playerMap = _playerInput.actions.FindActionMap(PlayerInputContext.ActionMapName);
-            if (playerMap == null)
-                throw new System.InvalidOperationException($"{nameof(InputReader)} requires action map {PlayerInputContext.ActionMapName}.");
-            if (playerMap.FindAction("Move") == null)
-                throw new System.InvalidOperationException($"{nameof(InputReader)} requires action Player/Move.");
-            if (playerMap.FindAction("Attack") == null)
-                throw new System.InvalidOperationException($"{nameof(InputReader)} requires action Player/Attack.");
-            if (playerMap.FindAction("Interact") == null)
-                throw new System.InvalidOperationException($"{nameof(InputReader)} requires action Player/Interact.");
+            TryAssignDefaultActionsAssetInEditor();
+            using (new InputActionGateway(_actions)) { }
         }
 
         public void SwitchContext(InputContext context)
         {
             _currentContext = context;
-            _buffer.Clear(); // xả command cũ (CONTEXT §14E)
-            _playerInput.SwitchCurrentActionMap(context switch
-            {
-                InputContext.Player  => PlayerInputContext.ActionMapName,
-                InputContext.Vehicle => VehicleInputContext.ActionMapName,
-                InputContext.UI      => UIInputContext.ActionMapName,
-                _                   => PlayerInputContext.ActionMapName,
-            });
+
+            if (_buffer == null)
+                throw new InvalidOperationException($"{nameof(InputReader)} requires {nameof(CommandBuffer)} injection before switching input context.");
+
+            _attackHeld = false;
+            _buffer.Clear();
+            EnsureGateway();
+            _gateway.SwitchContext(context);
         }
+
+        private void Awake()
+        {
+            TryAssignDefaultActionsAssetInEditor();
+            EnsureGateway();
+            _gateway.SwitchContext(_currentContext);
+        }
+
+#if UNITY_EDITOR
+        private void Reset()
+        {
+            TryAssignDefaultActionsAssetInEditor();
+        }
+
+        private void OnValidate()
+        {
+            TryAssignDefaultActionsAssetInEditor();
+        }
+#endif
 
         private void Update()
         {
             if (!_controlledEntityId.IsValid) return;
+
+            EnsureGateway();
             switch (_currentContext)
             {
-                case InputContext.Player:  ReadPlayerMap();  break;
-                case InputContext.Vehicle: ReadVehicleMap(); break;
-                // UI do Unity EventSystem xử lý — không cần đọc thủ công
+                case InputContext.Player:
+                    ReadPlayerMap();
+                    break;
+                case InputContext.Vehicle:
+                    ReadVehicleMap();
+                    break;
             }
         }
 
-        // R16: Tất cả lệnh Enqueue chỉ nằm trong file này.
+        private void OnDestroy()
+        {
+            _gateway?.Dispose();
+            _gateway = null;
+        }
+
         private void ReadPlayerMap()
         {
-            // Di chuyển — đọc mỗi frame (liên tục)
-            var mv = _playerInput.actions["Player/Move"].ReadValue<Vector2>();
-            _buffer.Enqueue(new MoveCommand(_controlledEntityId, mv.x, mv.y, Time.time));
+            var move = _gateway.ReadPlayerMove();
+            _buffer.Enqueue(new MoveCommand(_controlledEntityId, move.x, move.y, Time.time));
 
-            // Tấn công — theo dõi giữ nút
-            var atk = _playerInput.actions["Player/Attack"];
-            if (atk.WasPressedThisFrame()) { _attackHeld = true; _attackHeldStart = Time.time; }
+            if (_gateway.WasPlayerAttackPressedThisFrame())
+            {
+                _attackHeld = true;
+                _attackHeldStart = Time.time;
+            }
+
             if (_attackHeld)
+            {
                 _buffer.Enqueue(new AttackCommand(_controlledEntityId, Time.time,
                                                   isHeld: true,
                                                   heldDuration: Time.time - _attackHeldStart));
-            if (atk.WasReleasedThisFrame()) _attackHeld = false;
+            }
 
-            // Tương tác — một lần mỗi lần nhấn
-            if (_playerInput.actions["Player/Interact"].WasPressedThisFrame())
+            if (_gateway.WasPlayerAttackReleasedThisFrame())
+                _attackHeld = false;
+
+            if (_gateway.WasPlayerInteractPressedThisFrame())
                 _buffer.Enqueue(new InteractCommand(_controlledEntityId, Time.time));
         }
 
         private void ReadVehicleMap()
         {
-            // Thêm đọc Vehicle action ở đây khi slice Vehicle được build.
+            // Vehicle commands are added when the Vehicle slice exists.
+        }
+
+        private void EnsureGateway()
+        {
+            _gateway ??= new InputActionGateway(_actions);
+        }
+
+        [System.Diagnostics.Conditional("UNITY_EDITOR")]
+        private void TryAssignDefaultActionsAssetInEditor()
+        {
+#if UNITY_EDITOR
+            if (_actions != null)
+                return;
+
+            // Do not treat this as a service locator pattern for runtime.
+            // It only prevents editor Play Mode from failing after scene/script refresh.
+            _actions = AssetDatabase.LoadAssetAtPath<InputActionAsset>(DefaultActionsAssetPath);
+            if (_actions != null && !UnityEngine.Application.isPlaying)
+                EditorUtility.SetDirty(this);
+#endif
         }
     }
 }
