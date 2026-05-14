@@ -25,7 +25,7 @@ namespace BillGameCore.Modules.Player.Presentation
 
         private bool  _deathPlayed;
         private float _lastDirX, _lastDirY;
-        private bool  _pendingInteract; // FIX-09
+        private IInteractable _currentInteractable;
 
         // FIX-05: Callback mang (EntityId, RewardBundle, Vector2) khớp với
         //         EnemyApplication.OnDied và SceneController.HandleEnemyDied.
@@ -76,9 +76,7 @@ namespace BillGameCore.Modules.Player.Presentation
                         break;
 
                     case CommandType.Interact:
-                        // FIX-09: Đặt flag, thực hiện IInteractable call trong OnTriggerEnter2D
-                        //         vì cần collider reference mới có ở đó.
-                        _pendingInteract = true;
+                        TryInteract();
                         break;
                 }
             }
@@ -94,12 +92,16 @@ namespace BillGameCore.Modules.Player.Presentation
         // PlayerPresenter gọi GetComponent<IInteractable>() — không biết kiểu Binder (R07).
         public void OnTriggerEnter2D(Collider2D col)
         {
-            // FIX-09: Chỉ thực hiện interact nếu có pending flag từ InteractCommand.
-            if (!_pendingInteract) return;
-            _pendingInteract = false;
             var interactable = col.GetComponent<IInteractable>();
-            if (interactable != null && interactable.CanInteract())
-                interactable.Interact();
+            if (interactable != null)
+                _currentInteractable = interactable;
+        }
+
+        public void OnTriggerExit2D(Collider2D col)
+        {
+            var interactable = col.GetComponent<IInteractable>();
+            if (interactable != null && ReferenceEquals(interactable, _currentInteractable))
+                _currentInteractable = null;
         }
 
         public void Dispose() => _app.OnDied -= HandleDied;
@@ -109,6 +111,12 @@ namespace BillGameCore.Modules.Player.Presentation
         {
             var worldPos = _view != null ? _view.WorldPosition : Vector2.zero;
             OnDiedCallback?.Invoke(id, bundle, worldPos);
+        }
+
+        private void TryInteract()
+        {
+            if (_currentInteractable != null && _currentInteractable.CanInteract())
+                _currentInteractable.Interact();
         }
     }
 }

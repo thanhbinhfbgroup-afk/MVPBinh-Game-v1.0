@@ -19,7 +19,7 @@ namespace BillGameCore.Modules.Inventory.Application
 
         public event Action Changed;
 
-        public IReadOnlyList<ItemStack> GetItems() => _state.Items;
+        public IReadOnlyList<ItemStack> GetItems() => _state.Items.ToArray();
 
         public bool HasItem(string itemId, int minAmount = 1)
         {

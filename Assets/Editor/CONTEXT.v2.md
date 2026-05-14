@@ -26,6 +26,8 @@ Mọi AI hoặc người sửa code phải đọc và tuân thủ tài liệu n�
 
 **Ghi chú tích hợp Enemy:** `EnemySpawner` được register trong scene scope theo kiểu optional. Chỉ khi gán đủ `EnemyView prefab` và `EnemyConfig` trong Inspector thì `BootstrapSceneLifetimeScope` mới register `EnemySpawner`. `SceneBootstrapper` hiện chưa tự spawn enemy vì chưa có contract vị trí/spawn wave.
 
+**Baseline scene asset hiện tại:** `Assets/_Game/Scripts/Scenes/Bootstrap.unity` có `SceneScope` gắn `BootstrapSceneLifetimeScope`, `Input` gắn `PlayerInput` + `InputReader`, `SceneController`, `PlayerView` prefab ở `Assets/_Game/Prefabs/Player/PlayerView.prefab`, và `PlayerConfig` ở `Assets/_Game/Data/Settings/PlayerConfig.asset`.
+
 ---
 
 ## 2. Triết lý kiến trúc
@@ -176,6 +178,7 @@ Core/Save/ISaveSnapshotConsumer.cs
 Quy tắc Core:
 - `EntityId.New()` chỉ gọi trong spawner/binder nơi entity instance được tạo.
 - `IDamageReceiver.ReceiveDamage()` là contract combat duy nhất cho nhận damage.
+- `ReceiveDamage()` implementations phải clamp damage âm về `0` trước khi trừ máu. Heal/buff không đi qua `DamageInfo`.
 - `IInteractable` được implement bởi binder/presentation object, không bởi Application.
 - `RewardBundle` là DTO reward dùng bởi enemy/death/reward flow.
 - Không thêm interface vào Core nếu chỉ 1-2 module dùng. Trường hợp đó đặt ở `SharedPorts` hoặc `Application/Ports` nội bộ module.
@@ -360,6 +363,22 @@ EnemyConfig             (optional, chỉ cần nếu muốn resolve EnemySpawner
 
 Không gán thiếu field bắt buộc. Nếu thiếu `InputReader`, `SceneController`, `PlayerView prefab` hoặc `PlayerConfig`, VContainer build hoặc runtime startup có thể fail. Enemy fields là optional nhưng phải gán đủ cả prefab và config nếu muốn register `EnemySpawner`.
 
+`BootstrapSceneLifetimeScope.Configure()` phải validate các field bắt buộc trước khi register. Nếu thiếu `InputReader`, `SceneController`, `PlayerView prefab` hoặc `PlayerConfig`, scope phải fail sớm bằng lỗi rõ tên field, không để NullReference mơ hồ ở startup.
+
+`InputReader.ValidateConfiguration()` phải được gọi từ scene scope để xác nhận `PlayerInput`, `PlayerInput.actions`, và các action `Player/Move`, `Player/Attack`, `Player/Interact` tồn tại trước khi runtime đọc input.
+
+Scene `Bootstrap.unity` baseline hiện có:
+
+```text
+SceneScope
+  -> BootstrapSceneLifetimeScope
+Input
+  -> PlayerInput
+  -> InputReader
+SceneController
+  -> SceneController
+```
+
 ### SceneBootstrapper
 
 File:
@@ -495,12 +514,14 @@ Domain không dùng UnityEngine.
 - MonoBehaviour.
 - callback chỉ forward sang presenter.
 - write Rigidbody2D/Animator output theo lệnh từ presenter.
+- forward cả `OnTriggerEnter2D` và `OnTriggerExit2D` để presenter giữ interact target hiện tại.
 
 `PlayerPresenter`:
 - đọc input qua `IInputCommandSource`.
 - không biết concrete command classes.
 - lấy world position từ `PlayerView.WorldPosition` khi player chết.
 - gọi `OnDiedCallback(EntityId, RewardBundle, Vector2)` cho scene layer.
+- nhận `InteractCommand` thì interact với target đang overlap hiện tại; không dùng pending flag phụ thuộc đúng frame `OnTriggerEnter2D`.
 
 `PlayerSpawner`:
 - có đúng 1 public constructor để VContainer resolve rõ ràng.
@@ -517,6 +538,7 @@ Player death flow:
 
 ```text
 Combat/Application gọi PlayerApplication.ReceiveDamage()
+  -> clamp damage âm về 0
   -> nếu chết: PlayerApplication.OnDied(EntityId, RewardBundle)
     -> PlayerPresenter.HandleDied()
       -> lấy PlayerView.WorldPosition
@@ -559,7 +581,7 @@ Rules:
 - Cross-module access đi qua `IInventoryReadService` hoặc `IInventoryWriteService`.
 
 Current behavior:
-- `GetItems()`
+- `GetItems()` trả snapshot read-only copy, không trả live `InventoryState.Items`.
 - `HasItem(itemId, minAmount)`
 - `AddItem(ItemStack)`
 - `RemoveItem(itemId, amount)`
@@ -675,6 +697,7 @@ Approved enemy death flow:
 
 ```text
 EnemyApplication.ReceiveDamage()
+  -> clamp damage âm về 0
   -> OnDied(EntityId, RewardBundle)
     -> EnemyPresenter lấy EnemyView.WorldPosition
     -> OnDiedCallback(EntityId, RewardBundle, Vector2)
@@ -793,11 +816,10 @@ InputCommandDispatcher.TryDequeue()
 ```text
 InputReader
   -> InteractCommand
+PlayerView.OnTriggerEnter2D / OnTriggerExit2D
+  -> PlayerPresenter cập nhật current IInteractable target
 PlayerPresenter
-  -> set pending interact flag
-PlayerView.OnTriggerEnter2D
-  -> PlayerPresenter.OnTriggerEnter2D(Collider2D)
-  -> col.GetComponent<IInteractable>()
+  -> khi nhận InteractCommand
   -> CanInteract()
   -> Interact()
 ```

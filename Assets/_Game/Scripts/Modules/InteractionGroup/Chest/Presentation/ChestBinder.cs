@@ -26,6 +26,13 @@ namespace BillGameCore.Modules.InteractionGroup.Chest.Presentation
         private void Awake()
         {
             if (_view == null) _view = GetComponent<ChestView>();
+            if (_view == null)
+            {
+                Debug.LogError($"{nameof(ChestBinder)} requires a {nameof(ChestView)} on {name}.", this);
+                enabled = false;
+                return;
+            }
+
             var def   = _config != null ? _config.ToDefinition() : new ChestDefinition();
             var state = new ChestState();
             _app       = new ChestApplication(def, state);

@@ -41,7 +41,8 @@ namespace BillGameCore.Modules.Enemy.Application
         {
             if (_state.IsDead) return new DamageResult(0f, 0f, false);
 
-            float applied = System.Math.Min(damage.Amount, _state.CurrentHealth);
+            float requested = System.Math.Max(0f, damage.Amount);
+            float applied = System.Math.Min(requested, _state.CurrentHealth);
             _state.CurrentHealth -= applied;
 
             bool justDied = _state.CurrentHealth <= 0f;

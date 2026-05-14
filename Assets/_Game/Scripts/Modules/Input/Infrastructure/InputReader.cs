@@ -28,6 +28,24 @@ namespace BillGameCore.Modules.Input.Infrastructure
         // Gọi bởi GameBootstrapper sau khi PlayerSpawner.Spawn() trả về Runtime.
         public void SetControlledEntity(EntityId id) => _controlledEntityId = id;
 
+        public void ValidateConfiguration()
+        {
+            if (_playerInput == null)
+                throw new System.InvalidOperationException($"{nameof(InputReader)} requires a PlayerInput reference.");
+            if (_playerInput.actions == null)
+                throw new System.InvalidOperationException($"{nameof(InputReader)} requires PlayerInput.actions.");
+
+            var playerMap = _playerInput.actions.FindActionMap(PlayerInputContext.ActionMapName);
+            if (playerMap == null)
+                throw new System.InvalidOperationException($"{nameof(InputReader)} requires action map {PlayerInputContext.ActionMapName}.");
+            if (playerMap.FindAction("Move") == null)
+                throw new System.InvalidOperationException($"{nameof(InputReader)} requires action Player/Move.");
+            if (playerMap.FindAction("Attack") == null)
+                throw new System.InvalidOperationException($"{nameof(InputReader)} requires action Player/Attack.");
+            if (playerMap.FindAction("Interact") == null)
+                throw new System.InvalidOperationException($"{nameof(InputReader)} requires action Player/Interact.");
+        }
+
         public void SwitchContext(InputContext context)
         {
             _currentContext = context;

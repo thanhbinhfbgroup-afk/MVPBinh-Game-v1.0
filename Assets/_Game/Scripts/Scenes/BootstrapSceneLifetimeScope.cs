@@ -29,6 +29,8 @@ namespace BillGameCore.Scenes
 
         protected override void Configure(IContainerBuilder builder)
         {
+            ValidateRequiredReferences();
+
             builder.Register<CommandBuffer>(Lifetime.Scoped);
             builder.Register<InputCommandDispatcher>(Lifetime.Scoped).As<IInputCommandSource>();
 
@@ -47,6 +49,20 @@ namespace BillGameCore.Scenes
             }
 
             builder.RegisterEntryPoint<SceneBootstrapper>();
+        }
+
+        private void ValidateRequiredReferences()
+        {
+            if (_inputReader == null)
+                throw new System.InvalidOperationException($"{nameof(BootstrapSceneLifetimeScope)} requires an InputReader reference.");
+            if (_sceneController == null)
+                throw new System.InvalidOperationException($"{nameof(BootstrapSceneLifetimeScope)} requires a SceneController reference.");
+            if (_playerPrefab == null)
+                throw new System.InvalidOperationException($"{nameof(BootstrapSceneLifetimeScope)} requires a PlayerView prefab reference.");
+            if (_playerConfig == null)
+                throw new System.InvalidOperationException($"{nameof(BootstrapSceneLifetimeScope)} requires a PlayerConfig reference.");
+
+            _inputReader.ValidateConfiguration();
         }
     }
 }

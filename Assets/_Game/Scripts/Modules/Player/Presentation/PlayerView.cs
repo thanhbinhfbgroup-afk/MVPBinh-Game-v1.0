@@ -21,6 +21,7 @@ namespace BillGameCore.Modules.Player.Presentation
         private void Update()                         => _presenter?.OnUpdate(Time.deltaTime);
         private void FixedUpdate()                    => _presenter?.OnFixedUpdate();
         private void OnTriggerEnter2D(Collider2D col) => _presenter?.OnTriggerEnter2D(col);
+        private void OnTriggerExit2D(Collider2D col)  => _presenter?.OnTriggerExit2D(col);
 
         // Các method write của View — chỉ được gọi bởi Presenter ──────
         public void SetVelocity(float vx, float vy)
