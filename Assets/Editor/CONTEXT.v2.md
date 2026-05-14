@@ -3,6 +3,10 @@
 **Tài liệu kiến trúc bắt buộc cho dự án BillGameCore.**
 Mọi AI hoặc người sửa code phải đọc và tuân thủ tài liệu này trước khi thay đổi script.
 
+**Tài liệu phụ trợ cho AI:**
+- AI hội thoại/tư vấn đọc thêm `Assets/Editor/AI_CONVERSATION_GUIDE.md`.
+- AI/agent sửa code theo module đọc thêm `Assets/Editor/AI_MODULE_WORKFLOW.md`.
+
 **Nguyên tắc vận hành:** không tự suy diễn pattern, không đổi convention ngầm, không thêm abstraction khi chưa có nhu cầu thật. Nếu code hiện tại và tài liệu này mâu thuẫn, phải dừng lại, báo rõ file/line liên quan và hỏi người sở hữu dự án trước khi sửa.
 
 ---
@@ -26,7 +30,7 @@ Mọi AI hoặc người sửa code phải đọc và tuân thủ tài liệu n�
 
 **Ghi chú tích hợp Enemy:** `EnemySpawner` được register trong scene scope theo kiểu optional. Chỉ khi gán đủ `EnemyView prefab` và `EnemyConfig` trong Inspector thì `BootstrapSceneLifetimeScope` mới register `EnemySpawner`. `SceneBootstrapper` hiện chưa tự spawn enemy vì chưa có contract vị trí/spawn wave.
 
-**Baseline scene asset hiện tại:** `Assets/_Game/Scripts/Scenes/Bootstrap.unity` có `SceneScope` gắn `BootstrapSceneLifetimeScope`, `Input` gắn `PlayerInput` + `InputReader`, `SceneController`, `PlayerView` prefab ở `Assets/_Game/Prefabs/Player/PlayerView.prefab`, và `PlayerConfig` ở `Assets/_Game/Data/Settings/PlayerConfig.asset`.
+**Baseline scene asset hiện tại:** `Assets/_Game/Scripts/Scenes/Bootstrap.unity` có `SceneScope` gắn `BootstrapSceneLifetimeScope`, `Input` chỉ gắn `InputReader`, `SceneController`, `PlayerView` prefab ở `Assets/_Game/Prefabs/Player/PlayerView.prefab`, và `PlayerConfig` ở `Assets/_Game/Data/Settings/PlayerConfig.asset`. `InputReader` trỏ trực tiếp tới `Assets/Settings/InputSystem_Actions.inputactions` qua field `_actions`; không dùng `PlayerInput` component và không dùng Generate C# wrapper của Unity Input System.
 
 ---
 
@@ -365,7 +369,7 @@ Không gán thiếu field bắt buộc. Nếu thiếu `InputReader`, `SceneContr
 
 `BootstrapSceneLifetimeScope.Configure()` phải validate các field bắt buộc trước khi register. Nếu thiếu `InputReader`, `SceneController`, `PlayerView prefab` hoặc `PlayerConfig`, scope phải fail sớm bằng lỗi rõ tên field, không để NullReference mơ hồ ở startup.
 
-`InputReader.ValidateConfiguration()` phải được gọi từ scene scope để xác nhận `PlayerInput`, `PlayerInput.actions`, và các action `Player/Move`, `Player/Attack`, `Player/Interact` tồn tại trước khi runtime đọc input.
+`InputReader.ValidateConfiguration()` phải được gọi từ scene scope để xác nhận `InputActionAsset` đã được gán, action map `Player`, và các action `Player/Move`, `Player/Attack`, `Player/Interact` tồn tại trước khi runtime đọc input.
 
 Scene `Bootstrap.unity` baseline hiện có:
 
@@ -373,7 +377,6 @@ Scene `Bootstrap.unity` baseline hiện có:
 SceneScope
   -> BootstrapSceneLifetimeScope
 Input
-  -> PlayerInput
   -> InputReader
 SceneController
   -> SceneController
@@ -436,6 +439,7 @@ Modules/Input/Commands/InteractCommand.cs
 Modules/Input/Commands/SwitchContextCommand.cs
 Modules/Input/Commands/CommandBuffer.cs
 Modules/Input/Application/InputCommandDispatcher.cs
+Modules/Input/Infrastructure/InputActionGateway.cs
 Modules/Input/Infrastructure/InputReader.cs
 Modules/Input/Context/PlayerInputContext.cs
 Modules/Input/Context/VehicleInputContext.cs
@@ -445,15 +449,20 @@ Modules/Input/Context/UIInputContext.cs
 Rules:
 - `CommandBuffer.Enqueue()` chỉ được gọi từ `InputReader`.
 - `InputCommandDispatcher` là adapter `CommandBuffer -> IInputCommandSource`.
-- `InputReader` là MonoBehaviour, đọc New Input System và dịch raw input thành command object.
+- `InputActionGateway` là wrapper tự viết quanh `InputActionAsset`. Gateway clone asset runtime, cache action maps/actions cần dùng, bật/tắt map theo `InputContext`, và expose typed reads cho `InputReader`.
+- `InputReader` là MonoBehaviour, giữ serialized `InputActionAsset`, dùng `InputActionGateway` để đọc New Input System và dịch raw input thành command object.
+- `InputReader` có fallback editor-only để tự gán `Assets/Settings/InputSystem_Actions.inputactions` nếu `_actions` bị null trong Editor sau refresh scene/script. Đây chỉ là safety net cho baseline scene, không phải service locator runtime. Khi dự án có nhiều scene hoặc nhiều input asset, từng scene phải gán `_actions` rõ ràng hoặc dùng scene/input config được duyệt.
+- Không gắn `PlayerInput` component vào scene object `Input`.
+- Không bật Generate C# wrapper trên `.inputactions`; wrapper chính thức của dự án là `InputActionGateway`.
 - Entity presenter không được biết `MoveCommand`, `AttackCommand`, `InteractCommand` concrete types.
 - Khi switch context phải clear command buffer.
+- `CommandBuffer` có constructor nhận capacity, nên scene scope phải register bằng factory rõ capacity (`new CommandBuffer(size)`), không để VContainer resolve primitive `int`.
 
 Flow:
 
 ```text
 InputReader.Update()
-  -> đọc PlayerInput action
+  -> đọc InputActionGateway trên runtime clone của InputActionAsset
   -> enqueue concrete command
 InputCommandDispatcher.TryDequeue()
   -> trả ICommand cho consumer
@@ -859,6 +868,7 @@ Consumer uses IInventoryWriteService
 | R18 | `EntityId.New()` chỉ gọi trong spawner/binder tạo entity instance. |
 | R19 | Player death và Enemy death là hai handler riêng trong SceneController. |
 | R20 | Active scene startup nằm trong Scenes, không nằm trong Composition. |
+| R21 | Input runtime không dùng `PlayerInput` component và không dùng Generate C# wrapper; `InputReader` phải đi qua `InputActionGateway`. |
 
 ---
 
@@ -873,6 +883,8 @@ Sau khi sửa script:
 5. `ProjectLifetimeScope` build được với `BillGameCore.Modules.Inventory` reference.
 6. `BootstrapSceneLifetimeScope` có đủ Inspector refs.
    - Enemy refs là optional, nhưng nếu muốn dùng `EnemySpawner` thì phải gán đủ `EnemyView prefab` và `EnemyConfig`.
+   - `Input` scene object chỉ có `InputReader`; `InputReader._actions` phải trỏ tới `InputSystem_Actions.inputactions`.
+   - Không có `PlayerInput` component trên scene object `Input`.
 7. Play scene:
    - Project scope build thành công.
    - Scene scope build thành công.
