@@ -11,13 +11,16 @@ namespace BillGameCore.Modules.Enemy.Infrastructure.Config
         [SerializeField] private float _moveSpeed  = 5f;
         [SerializeField] private float _maxHealth  = 100f;
         [SerializeField] private float _maxStamina = 100f;
-        // Thêm serialized config field khớp với EnemyDefinition.
+        [SerializeField] private int   _goldReward = 0;
+        [SerializeField] private int   _experienceReward = 0;
 
         public EnemyDefinition ToDefinition() => new EnemyDefinition
         {
             MoveSpeed  = _moveSpeed,
             MaxHealth  = _maxHealth,
             MaxStamina = _maxStamina,
+            GoldReward = _goldReward,
+            ExperienceReward = _experienceReward,
         };
     }
 }

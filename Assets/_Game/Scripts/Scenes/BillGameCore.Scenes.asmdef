@@ -6,6 +6,7 @@
         "BillGameCore.Composition",
         "BillGameCore.Modules.Input",
         "BillGameCore.Modules.Player",
+        "BillGameCore.Modules.Enemy",
         "VContainer"
     ],
     "includePlatforms": [],

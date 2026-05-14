@@ -8,6 +8,7 @@
         public float MoveSpeed  = 5f;
         public float MaxHealth  = 100f;
         public float MaxStamina = 100f;
-        // Thêm stat đặc thù của entity ở đây.
+        public int   GoldReward = 0;
+        public int   ExperienceReward = 0;
     }
 }

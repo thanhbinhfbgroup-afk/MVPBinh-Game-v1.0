@@ -1,110 +1,55 @@
-﻿using System;
-using BillGameCore.Core.Interaction;
+using System;
 using BillGameCore.Core.Rewards;
-using EntityId = BillGameCore.Core.ValueObjects.EntityId;
 using BillGameCore.Modules.Enemy.Application;
-using BillGameCore.SharedPorts.Combat;
-using BillGameCore.SharedPorts.Input;
 using UnityEngine;
+using EntityId = BillGameCore.Core.ValueObjects.EntityId;
 
 namespace BillGameCore.Modules.Enemy.Presentation
 {
-    // Bridge IInputCommandSource → EnemyApplication → EnemyView mỗi frame.
-    // Được tạo bởi EnemySpawner — KHÔNG qua DI container (R04).
-    //
-    // FIX-03: Dùng CommandType enum + interface IMoveCommand/IAttackCommand (SharedPorts).
-    //         KHÔNG tham chiếu BillGameCore.Modules.Input.Commands namespace (R06/R07).
-    // FIX-05: Signature OnDiedCallback khớp với Application.OnDied (§14C).
+    // Bridge EnemyApplication -> EnemyView. Created by EnemySpawner, never by DI.
     public sealed class EnemyPresenter : IDisposable
     {
-        private readonly EnemyApplication      _app;
-        private readonly EnemyView             _view;
-        private readonly IInputCommandSource _input;
-        private readonly ICombatService      _combat; // null cho đến khi Slice 03 được merge
+        private readonly EnemyApplication _app;
+        private readonly EnemyView        _view;
 
-        private bool  _deathPlayed;
-        private float _lastDirX, _lastDirY;
-        private bool  _pendingInteract; // FIX-09
+        private bool _deathPlayed;
 
-        // FIX-05: Callback mang (EntityId, RewardBundle, Vector2) khớp với
-        //         EnemyApplication.OnDied và SceneController.HandleEnemyDied.
         public Action<EntityId, RewardBundle, Vector2> OnDiedCallback;
 
-        // Constructor khi ICombatService chưa có (Slice 01-02).
-        public EnemyPresenter(EnemyApplication app, EnemyView view, IInputCommandSource input)
-            : this(app, view, input, null) { }
-
-        // Constructor từ Slice 03 trở đi khi ICombatService đã có.
-        public EnemyPresenter(EnemyApplication app, EnemyView view,
-                            IInputCommandSource input, ICombatService combat)
+        public EnemyPresenter(EnemyApplication app, EnemyView view)
         {
-            _app    = app;
-            _view   = view;
-            _input  = input;
-            _combat = combat;
+            _app = app;
+            _view = view;
             _app.OnDied += HandleDied;
         }
 
-        // Gọi từ EnemyView.Update() — không gọi trực tiếp từ scene code.
         public void OnUpdate(float deltaTime)
         {
             if (_app.IsDead)
             {
-                if (!_deathPlayed) { _deathPlayed = true; _view.PlayDeath(); }
+                if (!_deathPlayed)
+                {
+                    _deathPlayed = true;
+                    _view.PlayDeath();
+                }
+
                 return;
             }
 
-            // FIX-03: Chỉ dùng CommandType enum và cast sang SharedPorts interface.
-            //         KHÔNG dùng kiểu MoveCommand/AttackCommand cụ thể (R06/R07).
-            while (_input.TryDequeue(out ICommand cmd))
-            {
-                switch (cmd.Type)
-                {
-                    case CommandType.Move:
-                        // Cast sang IMoveCommand (SharedPorts) để đọc DirX/Y (FIX-03).
-                        if (cmd is IMoveCommand mv)
-                        {
-                            _lastDirX = mv.DirX;
-                            _lastDirY = mv.DirY;
-                        }
-                        break;
-
-                    case CommandType.Attack:
-                        // TODO Slice 03: gọi _combat?.RequestAttack(...)
-                        // if (cmd is IAttackCommand atk) { ... }
-                        break;
-
-                    case CommandType.Interact:
-                        // FIX-09: Đặt flag, thực hiện IInteractable call trong OnTriggerEnter2D
-                        //         vì cần collider reference mới có ở đó.
-                        _pendingInteract = true;
-                        break;
-                }
-            }
-
-            _app.Tick(_lastDirX, _lastDirY, deltaTime);
-            _view.UpdateMoveAnimation(_lastDirX, _lastDirY);
+            _app.Tick(0f, 0f, deltaTime);
+            _view.UpdateMoveAnimation(0f, 0f);
         }
 
-        // Gọi từ EnemyView.FixedUpdate() — write physics ở đây, không trong Update.
         public void OnFixedUpdate() => _view.SetVelocity(_app.VelocityX, _app.VelocityY);
 
-        // Gọi từ EnemyView.OnTriggerEnter2D() — pattern forward R03.
-        // PlayerPresenter gọi GetComponent<IInteractable>() — không biết kiểu Binder (R07).
         public void OnTriggerEnter2D(Collider2D col)
         {
-            // FIX-09: Chỉ thực hiện interact nếu có pending flag từ InteractCommand.
-            if (!_pendingInteract) return;
-            _pendingInteract = false;
-            var interactable = col.GetComponent<IInteractable>();
-            if (interactable != null && interactable.CanInteract())
-                interactable.Interact();
+            // Enemy interaction/combat collision is added by future combat/AI slices.
         }
 
         public void Dispose() => _app.OnDied -= HandleDied;
 
-        // FIX-05: Lấy vị trí thực từ View (transform) thay vì Vector2.zero từ Application.
-        private void HandleDied(EntityId id, RewardBundle bundle, Vector2 _)
+        private void HandleDied(EntityId id, RewardBundle bundle)
         {
             var worldPos = _view != null ? _view.WorldPosition : Vector2.zero;
             OnDiedCallback?.Invoke(id, bundle, worldPos);

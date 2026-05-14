@@ -22,8 +22,7 @@ namespace BillGameCore.Scenes
             _rewardGrant = rewardGrant;
         }
 
-        // FIX-10: Signature khớp với EnemyApplication.OnDied (EntityId, RewardBundle, Vector2).
-        // Được gọi bởi EnemyPresenter.OnDiedCallback — wire trong GameBootstrapper sau EnemySpawner.Spawn().
+        // Được gọi bởi EnemyPresenter.OnDiedCallback sau khi EnemySpawner.Spawn() được wire bởi scene code.
         public void HandleEnemyDied(EntityId entityId, RewardBundle bundle, Vector2 worldPosition)
         {
             _rewardGrant?.Grant(bundle);
