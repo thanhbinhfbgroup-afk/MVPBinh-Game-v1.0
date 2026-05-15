@@ -1,4 +1,4 @@
-# AI Conversation Guide - BillGameCore
+# AI Conversation Guide - BillGameCore Tung
 
 File này dành cho AI hội thoại chỉ tư vấn, review, phân tích hướng làm hoặc trả lời câu hỏi kiến trúc. AI đọc file này không mặc định được phép sửa code.
 

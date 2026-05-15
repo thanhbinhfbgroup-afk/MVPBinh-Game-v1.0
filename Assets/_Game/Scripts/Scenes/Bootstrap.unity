@@ -148,7 +148,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4eabf290abeaed44ea7aa0e3799a47c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: BillGameCore.Modules.Input::BillGameCore.Modules.Input.Infrastructure.InputReader
-  _actions: {fileID: -944628639613478452, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
+  _actions: {fileID: -944628639613478452, guid: ee1698aa1bf7d0540986a0f9c95c3786, type: 3}
 --- !u!4 &964563327
 Transform:
   m_ObjectHideFlags: 0

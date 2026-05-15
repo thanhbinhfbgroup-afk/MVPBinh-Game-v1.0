@@ -88,11 +88,11 @@ Modules.Enemy
   refs: Core, SharedPorts, VContainer
 
 Composition
-  refs: Core, SharedPorts, Modules.Inventory, VContainer, VContainer.Unity
+  refs: Core, SharedPorts, Modules, VContainer
   không được ref Scenes
 
 Scenes
-  refs: Core, SharedPorts, Composition, Modules.Input, Modules.Player, Modules.Enemy, VContainer
+  refs: Core, SharedPorts, Modules, Composition, VContainer
   được phép biết scene components và scene bootstrap
 ```
 
