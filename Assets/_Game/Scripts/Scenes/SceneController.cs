@@ -14,6 +14,11 @@ namespace BillGameCore.Scenes
     // R06: SceneController chỉ đụng interface SharedPorts, không đụng nội bộ module.
     public sealed class SceneController : MonoBehaviour
     {
+        // Thêm dòng này để chỉnh vị trí trong Inspector
+        
+
+        // Thuộc tính để SceneBootstrapper có thể truy cập vị trí
+      
         private IRewardGrantService _rewardGrant;
         // Slice 04: [Inject] private LootSpawner _lootSpawner;
 
