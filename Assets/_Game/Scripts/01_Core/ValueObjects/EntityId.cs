@@ -1,51 +1,26 @@
-using System;
-
 namespace BillGameCore.Core.ValueObjects
 {
-    public readonly struct EntityId : IEquatable<EntityId>
+    // ADR-04: Dùng Guid — duy nhất tuyệt đối, không cần static counter,
+    //         an toàn khi spawn song song.
+    // R18: EntityId.New() CHỈ được gọi từ class Spawner.
+    public readonly struct EntityId : System.IEquatable<EntityId>
     {
-        public static EntityId Empty => new EntityId(Guid.Empty);
+        public static readonly EntityId Invalid = new EntityId(System.Guid.Empty);
 
-        public Guid Value { get; }
+        /// <summary>R18: chỉ gọi từ Spawner/Binder khi tạo entity instance.</summary>
+        public static EntityId New() => new EntityId(System.Guid.NewGuid());
 
-        private EntityId(Guid value)
-        {
-            Value = value;
-        }
+        private EntityId(System.Guid value) { Value = value; }
 
-        public static EntityId New()
-        {
-            return new EntityId(Guid.NewGuid());
-        }
+        public System.Guid Value { get; }
+        public bool IsValid => Value != System.Guid.Empty;
 
-        public bool Equals(EntityId other)
-        {
-            return Value.Equals(other.Value);
-        }
+        public bool Equals(EntityId other) => Value == other.Value;
+        public override bool Equals(object obj) => obj is EntityId e && Equals(e);
+        public override int GetHashCode() => Value.GetHashCode();
+        public override string ToString() => Value.ToString("N").Substring(0, 8);
 
-        public override bool Equals(object obj)
-        {
-            return obj is EntityId other && Equals(other);
-        }
-
-        public override int GetHashCode()
-        {
-            return Value.GetHashCode();
-        }
-
-        public override string ToString()
-        {
-            return Value.ToString();
-        }
-
-        public static bool operator ==(EntityId left, EntityId right)
-        {
-            return left.Equals(right);
-        }
-
-        public static bool operator !=(EntityId left, EntityId right)
-        {
-            return !left.Equals(right);
-        }
+        public static bool operator ==(EntityId a, EntityId b) => a.Equals(b);
+        public static bool operator !=(EntityId a, EntityId b) => !a.Equals(b);
     }
 }

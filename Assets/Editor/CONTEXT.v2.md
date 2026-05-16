@@ -16,21 +16,21 @@ Mọi AI hoặc người sửa code phải đọc và tuân thủ tài liệu n�
 **Project:** BillGameCore — Unity `6000.4.6f1`, 2D game, VContainer, New Input System. MessagePipe đã có package nhưng chưa phải backbone hiện tại.
 
 **Baseline đã duyệt hiện tại:**
-- `Core`
-- `SharedPorts`
-- `Modules/Input`
-- `Modules/Player`
-- `Modules/Inventory`
-- `Modules/Enemy`
-- `Modules/InteractionGroup/Chest`
-- `Composition/ProjectLifetimeScope`
-- `Scenes/BootstrapSceneLifetimeScope`
-- `Scenes/SceneBootstrapper`
-- `Scenes/SceneController`
+- `01_Core`
+- `02_SharedPorts`
+- `03_Modules/Input`
+- `03_Modules/Player`
+- `03_Modules/Inventory`
+- `03_Modules/Enemy`
+- `03_Modules/InteractionGroup/Chest`
+- `04_Composition/ProjectLifetimeScope`
+- `05_Scenes/BootstrapSceneLifetimeScope`
+- `05_Scenes/SceneBootstrapper`
+- `05_Scenes/SceneController`
 
 **Ghi chú tích hợp Enemy:** `EnemySpawner` được register trong scene scope theo kiểu optional. Chỉ khi gán đủ `EnemyView prefab` và `EnemyConfig` trong Inspector thì `BootstrapSceneLifetimeScope` mới register `EnemySpawner`. `SceneBootstrapper` hiện chưa tự spawn enemy vì chưa có contract vị trí/spawn wave.
 
-**Baseline scene asset hiện tại:** `Assets/_Game/Scripts/Scenes/Bootstrap.unity` có `SceneScope` gắn `BootstrapSceneLifetimeScope`, `Input` chỉ gắn `InputReader`, `SceneController`, `PlayerView` prefab ở `Assets/_Game/Prefabs/Player/PlayerView.prefab`, và `PlayerConfig` ở `Assets/_Game/Data/Settings/PlayerConfig.asset`. `InputReader` trỏ trực tiếp tới `Assets/Settings/InputSystem_Actions.inputactions` qua field `_actions`; không dùng `PlayerInput` component và không dùng Generate C# wrapper của Unity Input System.
+**Baseline scene asset hiện tại:** `Assets/_Game/Scripts/05_Scenes/Bootstrap.unity` có `SceneScope` gắn `BootstrapSceneLifetimeScope`, `Input` chỉ gắn `InputReader`, `SceneController`, `PlayerView` prefab ở `Assets/_Game/Prefabs/Player/PlayerView.prefab`, và `PlayerConfig` ở `Assets/_Game/Data/Settings/PlayerConfig.asset`. `InputReader` trỏ trực tiếp tới `Assets/Settings/InputSystem_Actions.inputactions` qua field `_actions`; không dùng `PlayerInput` component và không dùng Generate C# wrapper của Unity Input System.
 
 ---
 
@@ -40,7 +40,7 @@ Mọi AI hoặc người sửa code phải đọc và tuân thủ tài liệu n�
 - **Core tối thiểu.** Core chỉ chứa value objects và contracts thật sự dùng chung. Core không có game flow, không có UnityEngine, không có dependency package ngoài BCL.
 - **SharedPorts là biên giao tiếp giữa module.** Module này muốn nói chuyện với module khác thì đi qua `SharedPorts` hoặc MessagePipe khi đã unlock.
 - **Composition không biết Scenes.** Tuyệt đối không tạo reference `Composition -> Scenes`.
-- **Scenes sở hữu orchestration của scene.** Startup scene nằm ở `Scenes/SceneBootstrapper`, không nằm ở `Composition/GameBootstrapper`.
+- **Scenes sở hữu orchestration của scene.** Startup scene nằm ở `05_Scenes/SceneBootstrapper`, không nằm ở `04_Composition/GameBootstrapper`.
 - **Runtime-per-entity.** `State`, `Application`, `Presenter`, `Runtime` của entity được tạo bởi spawner/binder, không register vào DI container.
 - **MonoBehaviour chỉ forward hoặc write Unity output.** Business logic nằm ở Application/Presenter tùy layer, không để trong View.
 
@@ -88,11 +88,11 @@ Modules.Enemy
   refs: Core, SharedPorts, VContainer
 
 Composition
-  refs: Core, SharedPorts, Modules.Inventory, VContainer, VContainer.Unity
+  refs: Core, SharedPorts, Modules, VContainer
   không được ref Scenes
 
 Scenes
-  refs: Core, SharedPorts, Composition, Modules.Input, Modules.Player, Modules.Enemy, VContainer
+  refs: Core, SharedPorts, Modules, Composition, VContainer
   được phép biết scene components và scene bootstrap
 ```
 
@@ -114,7 +114,7 @@ Assets/_Game/
 │   ├── Items/
 │   └── Settings/
 └── Scripts/
-    ├── Core/
+    ├── 01_Core/
     │   ├── BillGameCore.Core.asmdef
     │   ├── Combat/
     │   ├── Interaction/
@@ -123,7 +123,7 @@ Assets/_Game/
     │   ├── Save/
     │   └── ValueObjects/
     │
-    ├── SharedPorts/
+    ├── 02_SharedPorts/
     │   ├── BillGameCore.SharedPorts.asmdef
     │   ├── Combat/
     │   ├── Economy/
@@ -132,27 +132,25 @@ Assets/_Game/
     │   ├── Messages/
     │   └── Player/
     │
-    ├── Modules/
+    ├── 03_Modules/
     │   ├── Input/
     │   ├── Player/
     │   ├── Inventory/
     │   ├── InteractionGroup/
     │   └── Enemy/
     │
-    ├── Composition/
+    ├── 04_Composition/
     │   ├── BillGameCore.Composition.asmdef
     │   ├── ProjectLifetimeScope.cs
     │   ├── SceneLifetimeScope.cs  (generic/legacy placeholder, không chứa scene orchestration)
     │   └── GameBootstrapper.cs    (project-level placeholder)
     │
-    ├── Scenes/
-    │   ├── BillGameCore.Scenes.asmdef
-    │   ├── BootstrapSceneLifetimeScope.cs
-    │   ├── SceneBootstrapper.cs
-    │   └── SceneController.cs
-    │
-    └── Editor/
-        └── BillGameCore.Editor.asmdef
+    └── 05_Scenes/
+        ├── BillGameCore.Scenes.asmdef
+        ├── BootstrapSceneLifetimeScope.cs
+        ├── SceneBootstrapper.cs
+        └── SceneController.cs
+
 ```
 
 ---
@@ -300,35 +298,6 @@ Không được register:
 - EnemyRuntime
 - bất kỳ per-entity runtime object nào
 
-### GameBootstrapper
-
-File:
-
-```text
-Composition/GameBootstrapper.cs
-```
-
-Status:
-- Project-level placeholder.
-- Không được inject `SceneController`.
-- Không được spawn player.
-- Không được biết scene-specific components.
-
-### SceneLifetimeScope trong Composition
-
-File:
-
-```text
-Composition/SceneLifetimeScope.cs
-```
-
-Status:
-- Generic/legacy placeholder.
-- Không dùng để register `SceneBootstrapper` vì class đó nằm trong `Scenes`.
-- Active scene scope hiện tại là `Scenes/BootstrapSceneLifetimeScope.cs`.
-
----
-
 ## 8. Scenes
 
 Scenes là nơi chứa scene-level orchestration.
@@ -433,17 +402,17 @@ refs: Core, SharedPorts, VContainer, Unity.InputSystem
 Files:
 
 ```text
-Modules/Input/Commands/MoveCommand.cs
-Modules/Input/Commands/AttackCommand.cs
-Modules/Input/Commands/InteractCommand.cs
-Modules/Input/Commands/SwitchContextCommand.cs
-Modules/Input/Commands/CommandBuffer.cs
-Modules/Input/Application/InputCommandDispatcher.cs
-Modules/Input/Infrastructure/InputActionGateway.cs
-Modules/Input/Infrastructure/InputReader.cs
-Modules/Input/Context/PlayerInputContext.cs
-Modules/Input/Context/VehicleInputContext.cs
-Modules/Input/Context/UIInputContext.cs
+03_Modules/Input/Commands/MoveCommand.cs
+03_Modules/Input/Commands/AttackCommand.cs
+03_Modules/Input/Commands/InteractCommand.cs
+03_Modules/Input/Commands/SwitchContextCommand.cs
+03_Modules/Input/Commands/CommandBuffer.cs
+03_Modules/Input/Application/InputCommandDispatcher.cs
+03_Modules/Input/Infrastructure/InputActionGateway.cs
+03_Modules/Input/Infrastructure/InputReader.cs
+03_Modules/Input/Context/PlayerInputContext.cs
+03_Modules/Input/Context/VehicleInputContext.cs
+03_Modules/Input/Context/UIInputContext.cs
 ```
 
 Rules:
