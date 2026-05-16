@@ -1,0 +1,22 @@
+﻿{
+    "name": "BillGameCore.Scenes",
+    "rootNamespace": "",
+    "references": [
+        "BillGameCore.Core",
+        "BillGameCore.SharedPorts",
+        "BillGameCore.Composition",
+        "BillGameCore.Modules.Input",
+        "BillGameCore.Modules.Player",
+        "BillGameCore.Modules.Enemy",
+        "VContainer"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
