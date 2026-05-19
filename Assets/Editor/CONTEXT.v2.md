@@ -1,4 +1,4 @@
-# CONTEXT v2.1 — BillGameCore
+# CONTEXT v2.2 — BillGameCore
 
 **Tài liệu kiến trúc bắt buộc cho dự án BillGameCore.**
 Mọi AI hoặc người sửa code phải đọc và tuân thủ tài liệu này trước khi thay đổi script.
@@ -15,22 +15,24 @@ Mọi AI hoặc người sửa code phải đọc và tuân thủ tài liệu n�
 
 **Project:** BillGameCore — Unity `6000.4.6f1`, 2D game, VContainer, New Input System. MessagePipe đã có package nhưng chưa phải backbone hiện tại.
 
+**Cách học/thực hành hiện tại:** vẫn giữ khung kiến trúc đầy đủ A-Z bên dưới, nhưng triển khai theo vertical slice để hiểu rõ từng luồng chạy trước khi mở rộng số lượng tính năng. Không hạ cấp kiến trúc thành MVP sơ sài và không xóa định hướng Player/Inventory/Enemy/Scenes khỏi khung.
+
 **Baseline đã duyệt hiện tại:**
-- `Core`
-- `SharedPorts`
-- `Modules/Input`
-- `Modules/Player`
-- `Modules/Inventory`
-- `Modules/Enemy`
-- `Modules/InteractionGroup/Chest`
-- `Composition/ProjectLifetimeScope`
-- `Scenes/BootstrapSceneLifetimeScope`
-- `Scenes/SceneBootstrapper`
-- `Scenes/SceneController`
+- `01_Core`
+- `02_SharedPorts`
+- `03_Modules/Input`
+- `03_Modules/Player`
+- `03_Modules/Inventory`
+- `03_Modules/Enemy`
+- `03_Modules/InteractionGroup/Chest`
+- `04_Composition/ProjectLifetimeScope`
+- `05_Scenes/BootstrapSceneLifetimeScope`
+- `05_Scenes/SceneBootstrapper`
+- `05_Scenes/SceneController`
 
 **Ghi chú tích hợp Enemy:** `EnemySpawner` được register trong scene scope theo kiểu optional. Chỉ khi gán đủ `EnemyView prefab` và `EnemyConfig` trong Inspector thì `BootstrapSceneLifetimeScope` mới register `EnemySpawner`. `SceneBootstrapper` hiện chưa tự spawn enemy vì chưa có contract vị trí/spawn wave.
 
-**Baseline scene asset hiện tại:** `Assets/_Game/Scripts/Scenes/Bootstrap.unity` có `SceneScope` gắn `BootstrapSceneLifetimeScope`, `Input` chỉ gắn `InputReader`, `SceneController`, `PlayerView` prefab ở `Assets/_Game/Prefabs/Player/PlayerView.prefab`, và `PlayerConfig` ở `Assets/_Game/Data/Settings/PlayerConfig.asset`. `InputReader` trỏ trực tiếp tới `Assets/Settings/InputSystem_Actions.inputactions` qua field `_actions`; không dùng `PlayerInput` component và không dùng Generate C# wrapper của Unity Input System.
+**Baseline scene asset hiện tại:** `Assets/_Game/GlobalScenes/00_Bootstrap.unity` có `SceneScope` gắn `BootstrapSceneLifetimeScope`, `Input` chỉ gắn `InputReader`, `SceneController`, `PlayerView` prefab ở `Assets/_Game/Prefabs/Player/PlayerView.prefab`, và `PlayerConfig` ở `Assets/_Game/Data/Settings/PlayerConfig.asset`. `InputReader` trỏ trực tiếp tới `Assets/Settings/InputSystem_Actions.inputactions` qua field `_actions`; không dùng `PlayerInput` component và không dùng Generate C# wrapper của Unity Input System.
 
 ---
 
@@ -40,7 +42,7 @@ Mọi AI hoặc người sửa code phải đọc và tuân thủ tài liệu n�
 - **Core tối thiểu.** Core chỉ chứa value objects và contracts thật sự dùng chung. Core không có game flow, không có UnityEngine, không có dependency package ngoài BCL.
 - **SharedPorts là biên giao tiếp giữa module.** Module này muốn nói chuyện với module khác thì đi qua `SharedPorts` hoặc MessagePipe khi đã unlock.
 - **Composition không biết Scenes.** Tuyệt đối không tạo reference `Composition -> Scenes`.
-- **Scenes sở hữu orchestration của scene.** Startup scene nằm ở `Scenes/SceneBootstrapper`, không nằm ở `Composition/GameBootstrapper`.
+- **Scenes sở hữu orchestration của scene.** Startup scene nằm ở `05_Scenes/SceneBootstrapper`, không nằm ở `04_Composition/GameBootstrapper`.
 - **Runtime-per-entity.** `State`, `Application`, `Presenter`, `Runtime` của entity được tạo bởi spawner/binder, không register vào DI container.
 - **MonoBehaviour chỉ forward hoặc write Unity output.** Business logic nằm ở Application/Presenter tùy layer, không để trong View.
 
@@ -88,11 +90,11 @@ Modules.Enemy
   refs: Core, SharedPorts, VContainer
 
 Composition
-  refs: Core, SharedPorts, Modules.Inventory, VContainer, VContainer.Unity
+  refs: Core, SharedPorts, Modules, VContainer
   không được ref Scenes
 
 Scenes
-  refs: Core, SharedPorts, Composition, Modules.Input, Modules.Player, Modules.Enemy, VContainer
+  refs: Core, SharedPorts, Modules, Composition, VContainer
   được phép biết scene components và scene bootstrap
 ```
 
@@ -113,8 +115,10 @@ Assets/_Game/
 ├── Data/
 │   ├── Items/
 │   └── Settings/
+├── GlobalScenes/
+│   └── 00_Bootstrap.unity
 └── Scripts/
-    ├── Core/
+    ├── 01_Core/
     │   ├── BillGameCore.Core.asmdef
     │   ├── Combat/
     │   ├── Interaction/
@@ -123,7 +127,7 @@ Assets/_Game/
     │   ├── Save/
     │   └── ValueObjects/
     │
-    ├── SharedPorts/
+    ├── 02_SharedPorts/
     │   ├── BillGameCore.SharedPorts.asmdef
     │   ├── Combat/
     │   ├── Economy/
@@ -132,27 +136,25 @@ Assets/_Game/
     │   ├── Messages/
     │   └── Player/
     │
-    ├── Modules/
+    ├── 03_Modules/
     │   ├── Input/
     │   ├── Player/
     │   ├── Inventory/
     │   ├── InteractionGroup/
     │   └── Enemy/
     │
-    ├── Composition/
+    ├── 04_Composition/
     │   ├── BillGameCore.Composition.asmdef
     │   ├── ProjectLifetimeScope.cs
     │   ├── SceneLifetimeScope.cs  (generic/legacy placeholder, không chứa scene orchestration)
     │   └── GameBootstrapper.cs    (project-level placeholder)
     │
-    ├── Scenes/
-    │   ├── BillGameCore.Scenes.asmdef
-    │   ├── BootstrapSceneLifetimeScope.cs
-    │   ├── SceneBootstrapper.cs
-    │   └── SceneController.cs
-    │
-    └── Editor/
-        └── BillGameCore.Editor.asmdef
+    └── 05_Scenes/
+        ├── BillGameCore.Scenes.asmdef
+        ├── BootstrapSceneLifetimeScope.cs
+        ├── SceneBootstrapper.cs
+        └── SceneController.cs
+
 ```
 
 ---
@@ -181,8 +183,11 @@ Core/Save/ISaveSnapshotConsumer.cs
 
 Quy tắc Core:
 - `EntityId.New()` chỉ gọi trong spawner/binder nơi entity instance được tạo.
+- `EntityId` dùng `Guid`, có `Invalid`, `IsValid`, constructor private, và `ToString()` rút gọn để log/debug dễ đọc.
 - `IDamageReceiver.ReceiveDamage()` là contract combat duy nhất cho nhận damage.
 - `ReceiveDamage()` implementations phải clamp damage âm về `0` trước khi trừ máu. Heal/buff không đi qua `DamageInfo`.
+- `DamageInfo` baseline dùng `float Amount`, `EntityId SourceId`, `bool IsCritical`.
+- `DamageResult` baseline dùng `float AppliedDamage`, `float RemainingHealth`, `bool JustDied`.
 - `IInteractable` được implement bởi binder/presentation object, không bởi Application.
 - `RewardBundle` là DTO reward dùng bởi enemy/death/reward flow.
 - Không thêm interface vào Core nếu chỉ 1-2 module dùng. Trường hợp đó đặt ở `SharedPorts` hoặc `Application/Ports` nội bộ module.
@@ -213,6 +218,11 @@ Quy tắc:
 - Concrete commands nằm trong `Modules/Input/Commands`.
 - Concrete commands implement interfaces từ `SharedPorts/Input`.
 - Consumer ngoài module Input chỉ dùng `ICommand`, `IMoveCommand`, `IAttackCommand`, `IInteractCommand`, `CommandType`.
+- `ICommand` dùng `EntityId ControlledEntityId`, không dùng `TargetId` hoặc `SourceId` cho input command.
+- `CommandType` phải có `None = 0`, sau đó `Move = 1`, `Attack = 2`, `Interact = 3`, `SwitchContext = 4`. Không đánh số lại sau khi đã có replay/save.
+- `IMoveCommand` expose `DirX`, `DirY`, `IsMoving`.
+- `IAttackCommand` expose `IsHeld`, `HeldDuration`.
+- `IInputCommandSource` expose `TryDequeue(out ICommand command)` và `HasCommands`.
 
 ### Inventory contracts
 
@@ -237,7 +247,9 @@ SharedPorts/Economy/IRewardGrantService.cs
 Status hiện tại:
 - Contract đã tồn tại.
 - Implementation chưa tồn tại.
-- `SceneController.SetRewardGrantService()` cho phép wiring sau, nhưng hiện không inject bắt buộc để tránh DI fail khi chưa có EconomyService.
+- `IWalletService` là read-only port cho UI/HUD: `Gold`, `Experience`.
+- `IRewardGrantService` là cổng grant toàn bộ `RewardBundle`: `void Grant(RewardBundle bundle)`.
+- Implementation mục tiêu nên là `RewardGrantService`, điều phối reward vào đúng hệ thống sở hữu dữ liệu. Không mặc định cho `EconomyService` ôm cả item reward.
 
 ### Player read contract
 
@@ -261,6 +273,8 @@ Status:
 - Message types đã tồn tại.
 - MessagePipe chưa là backbone hiện tại.
 - Chỉ dùng MessagePipe từ slice combat/reward/event khi đã đăng ký broker rõ ràng.
+- `EnemyDiedMessage` không chứa `UnityEngine.Vector2`; vị trí chết enemy đi qua scene callback/presentation layer cho tới khi có value object engine-free được duyệt.
+- `ItemPickedUpMessage` giữ `PickerId` và `ItemStack` để biết entity nào đã nhặt item.
 
 ---
 
@@ -299,35 +313,6 @@ Không được register:
 - EnemyPresenter
 - EnemyRuntime
 - bất kỳ per-entity runtime object nào
-
-### GameBootstrapper
-
-File:
-
-```text
-Composition/GameBootstrapper.cs
-```
-
-Status:
-- Project-level placeholder.
-- Không được inject `SceneController`.
-- Không được spawn player.
-- Không được biết scene-specific components.
-
-### SceneLifetimeScope trong Composition
-
-File:
-
-```text
-Composition/SceneLifetimeScope.cs
-```
-
-Status:
-- Generic/legacy placeholder.
-- Không dùng để register `SceneBootstrapper` vì class đó nằm trong `Scenes`.
-- Active scene scope hiện tại là `Scenes/BootstrapSceneLifetimeScope.cs`.
-
----
 
 ## 8. Scenes
 
@@ -433,24 +418,28 @@ refs: Core, SharedPorts, VContainer, Unity.InputSystem
 Files:
 
 ```text
-Modules/Input/Commands/MoveCommand.cs
-Modules/Input/Commands/AttackCommand.cs
-Modules/Input/Commands/InteractCommand.cs
-Modules/Input/Commands/SwitchContextCommand.cs
-Modules/Input/Commands/CommandBuffer.cs
-Modules/Input/Application/InputCommandDispatcher.cs
-Modules/Input/Infrastructure/InputActionGateway.cs
-Modules/Input/Infrastructure/InputReader.cs
-Modules/Input/Context/PlayerInputContext.cs
-Modules/Input/Context/VehicleInputContext.cs
-Modules/Input/Context/UIInputContext.cs
+03_Modules/Input/Commands/MoveCommand.cs
+03_Modules/Input/Commands/AttackCommand.cs
+03_Modules/Input/Commands/InteractCommand.cs
+03_Modules/Input/Commands/SwitchContextCommand.cs
+03_Modules/Input/Commands/CommandBuffer.cs
+03_Modules/Input/Application/InputCommandDispatcher.cs
+03_Modules/Input/Infrastructure/InputActionGateway.cs
+03_Modules/Input/Infrastructure/InputReader.cs
+03_Modules/Input/Context/InputContextNames.cs
 ```
 
 Rules:
 - `CommandBuffer.Enqueue()` chỉ được gọi từ `InputReader`.
 - `InputCommandDispatcher` là adapter `CommandBuffer -> IInputCommandSource`.
 - `InputActionGateway` là wrapper tự viết quanh `InputActionAsset`. Gateway clone asset runtime, cache action maps/actions cần dùng, bật/tắt map theo `InputContext`, và expose typed reads cho `InputReader`.
+- `InputActionGateway` dùng `InputContextNames`, không dùng `PlayerInputContext`, `VehicleInputContext`, `UIInputContext`.
+- `InputActionGateway` có `CurrentContext`; khi nhận context không hỗ trợ thì phải throw lỗi rõ, không fallback ngầm về Player.
+- `InputContextNames` là nơi duy nhất trong module Input gom tên action map: `Player`, `UI`, `Vehicle`.
 - `InputReader` là MonoBehaviour, giữ serialized `InputActionAsset`, dùng `InputActionGateway` để đọc New Input System và dịch raw input thành command object.
+- `InputReader` nhận `CommandBuffer` qua `[Inject]`.
+- `InputReader.SetControlledEntity(EntityId)` phải validate `EntityId.IsValid`.
+- `InputReader.ReadPlayerMap()` enqueue `MoveCommand` mỗi frame, kể cả khi không di chuyển, để consumer có thể set velocity về `0`.
 - `InputReader` có fallback editor-only để tự gán `Assets/Settings/InputSystem_Actions.inputactions` nếu `_actions` bị null trong Editor sau refresh scene/script. Đây chỉ là safety net cho baseline scene, không phải service locator runtime. Khi dự án có nhiều scene hoặc nhiều input asset, từng scene phải gán `_actions` rõ ràng hoặc dùng scene/input config được duyệt.
 - Không gắn `PlayerInput` component vào scene object `Input`.
 - Không bật Generate C# wrapper trên `.inputactions`; wrapper chính thức của dự án là `InputActionGateway`.
@@ -463,7 +452,7 @@ Flow:
 ```text
 InputReader.Update()
   -> đọc InputActionGateway trên runtime clone của InputActionAsset
-  -> enqueue concrete command
+  -> enqueue concrete command với ControlledEntityId hợp lệ
 InputCommandDispatcher.TryDequeue()
   -> trả ICommand cho consumer
 PlayerPresenter
@@ -865,7 +854,7 @@ Consumer uses IInventoryWriteService
 | R15 | Domain/Application không dùng UnityEngine. |
 | R16 | Chỉ InputReader được enqueue command. |
 | R17 | Prefab có `[Inject]` phải instantiate qua `container.Instantiate()`. |
-| R18 | `EntityId.New()` chỉ gọi trong spawner/binder tạo entity instance. |
+| R18 | `EntityId.New()` CHỈ được gọi từ Spawner/Binder nơi tạo entity instance. |
 | R19 | Player death và Enemy death là hai handler riêng trong SceneController. |
 | R20 | Active scene startup nằm trong Scenes, không nằm trong Composition. |
 | R21 | Input runtime không dùng `PlayerInput` component và không dùng Generate C# wrapper; `InputReader` phải đi qua `InputActionGateway`. |

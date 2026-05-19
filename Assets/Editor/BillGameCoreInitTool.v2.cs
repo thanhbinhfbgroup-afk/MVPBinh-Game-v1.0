@@ -1,4 +1,4 @@
-// BillGameCore baseline tool.
+// BillGameCore baseline tool v2.2
 //
 // This editor tool intentionally does not generate gameplay modules.
 // The approved architecture is documented in Assets/Editor/CONTEXT.v2.md.
@@ -19,7 +19,7 @@ public static class BillGameCoreInitTool
     private const string ProjectRoot = "Assets/_Game";
     private const string ScriptsRoot = ProjectRoot + "/Scripts";
     private const string ContextPath = "Assets/Editor/CONTEXT.v2.md";
-    private const string BootstrapScenePath = ScriptsRoot + "/Scenes/Bootstrap.unity";
+    private const string BootstrapScenePath = ProjectRoot + "/GlobalScenes/00_Bootstrap.unity";
     private const string InputActionsMetaPath = "Assets/Settings/InputSystem_Actions.inputactions.meta";
 
     private static readonly string[] RequiredDirectories =
@@ -27,7 +27,7 @@ public static class BillGameCoreInitTool
         ProjectRoot + "/Art",
         ProjectRoot + "/Data/Items",
         ProjectRoot + "/Data/Settings",
-        ProjectRoot + "/GlobalScene",
+        ProjectRoot + "/GlobalScenes",
 
         ScriptsRoot + "/01_Core/Combat",
         ScriptsRoot + "/01_Core/Interaction",
@@ -96,7 +96,6 @@ public static class BillGameCoreInitTool
         ScriptsRoot + "/02_SharedPorts/Economy/IWalletService.cs",
         ScriptsRoot + "/02_SharedPorts/Economy/IRewardGrantService.cs",
         ScriptsRoot + "/02_SharedPorts/Player/IPlayerReadService.cs",
-        ScriptsRoot + "/02_SharedPorts/Combat/ICombatService.cs",
         ScriptsRoot + "/02_SharedPorts/Messages/EnemyDiedMessage.cs",
         ScriptsRoot + "/02_SharedPorts/Messages/ItemPickedUpMessage.cs",
 
@@ -107,9 +106,7 @@ public static class BillGameCoreInitTool
         ScriptsRoot + "/03_Modules/Input/Commands/AttackCommand.cs",
         ScriptsRoot + "/03_Modules/Input/Commands/InteractCommand.cs",
         ScriptsRoot + "/03_Modules/Input/Commands/SwitchContextCommand.cs",
-        ScriptsRoot + "/03_Modules/Input/Context/PlayerInputContext.cs",
-        ScriptsRoot + "/03_Modules/Input/Context/VehicleInputContext.cs",
-        ScriptsRoot + "/03_Modules/Input/Context/UIInputContext.cs",
+        ScriptsRoot + "/03_Modules/Input/Context/InputContextNames.cs",
         ScriptsRoot + "/03_Modules/Input/Infrastructure/InputActionGateway.cs",
         ScriptsRoot + "/03_Modules/Input/Infrastructure/InputReader.cs",
 
@@ -267,6 +264,7 @@ public static class BillGameCoreInitTool
             ValidateAsmdef(asmdef, report);
 
         ValidateInputSystemSettings(report);
+        ValidateInputArchitectureDecisions(report);
         ValidateBootstrapScene(report);
         ValidateCompositionBoundary(report);
         ValidateToolSurface(report);
@@ -332,13 +330,33 @@ public static class BillGameCoreInitTool
 
     private static void ValidateCompositionBoundary(Report report)
     {
-        string compositionAsmdef = ScriptsRoot + "/Composition/BillGameCore.Composition.asmdef";
+        string compositionAsmdef = ScriptsRoot + "/04_Composition/BillGameCore.Composition.asmdef";
         if (!File.Exists(compositionAsmdef))
             return;
 
         string json = File.ReadAllText(compositionAsmdef);
         if (ExtractReferences(json).Contains("BillGameCore.Scenes"))
             report.Errors.Add("Composition asmdef must not reference BillGameCore.Scenes.");
+    }
+
+    private static void ValidateInputArchitectureDecisions(Report report)
+    {
+        string inputContextNames = ScriptsRoot + "/03_Modules/Input/Context/InputContextNames.cs";
+        string[] obsoleteContextFiles =
+        {
+            ScriptsRoot + "/03_Modules/Input/Context/PlayerInputContext.cs",
+            ScriptsRoot + "/03_Modules/Input/Context/VehicleInputContext.cs",
+            ScriptsRoot + "/03_Modules/Input/Context/UIInputContext.cs"
+        };
+
+        if (!File.Exists(inputContextNames))
+            report.Errors.Add($"Missing input context names file: {inputContextNames}");
+
+        foreach (string obsoleteFile in obsoleteContextFiles)
+        {
+            if (File.Exists(obsoleteFile))
+                report.Errors.Add($"Obsolete input context class must not exist: {obsoleteFile}");
+        }
     }
 
     private static void ValidateToolSurface(Report report)
