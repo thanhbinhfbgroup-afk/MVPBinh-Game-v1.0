@@ -1,0 +1,19 @@
+﻿{
+    "name": "BillGameCore.Modules.Input",
+    "rootNamespace": "",
+    "references": [
+        "BillGameCore.Core",
+        "BillGameCore.SharedPorts",
+        "VContainer",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
