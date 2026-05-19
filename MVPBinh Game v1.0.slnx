@@ -41,6 +41,7 @@
   <Project Path="Unity.TextMeshPro.Editor.csproj" />
   <Project Path="PsdPlugin.csproj" />
   <Project Path="Unity.2D.IK.Editor.csproj" />
+  <Project Path="BillGameCore.SharedPorts.csproj" />
   <Project Path="Unity.InternalAPIEngineBridge.001.csproj" />
   <Project Path="Unity.Burst.Editor.csproj" />
   <Project Path="Unity.2D.Common.Path.Editor.csproj" />
@@ -73,6 +74,7 @@
   <Project Path="Unity.ShaderGraph.Utilities.csproj" />
   <Project Path="Unity.VisualScripting.Shared.Editor.csproj" />
   <Project Path="Unity.2D.Aseprite.Common.csproj" />
+  <Project Path="BillGameCore.Modules.Input.csproj" />
   <Project Path="Unity.SurfaceCache.Runtime.csproj" />
   <Project Path="MessagePipe.Editor.csproj" />
   <Project Path="Unity.InternalAPIEngineBridge.RenderPipelines.Core.Runtime.Shared.csproj" />
@@ -82,6 +84,7 @@
   <Project Path="Unity.InputSystem.DocCodeSamples.csproj" />
   <Project Path="Unity.RenderPipelines.Universal.Shaders.csproj" />
   <Project Path="Unity.InternalAPIEditorBridge.ShaderGraph.Editor.csproj" />
+  <Project Path="BillGameCore.Core.csproj" />
   <Project Path="Unity.VisualScripting.DocCodeExamples.csproj" />
   <Project Path="Unity.PlasticSCM.Editor.Entities.csproj" />
   <Project Path="Unity.Rendering.LightTransport.Editor.csproj" />
