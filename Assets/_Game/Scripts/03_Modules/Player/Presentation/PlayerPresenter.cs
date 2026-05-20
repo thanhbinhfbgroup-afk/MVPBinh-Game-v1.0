@@ -24,5 +24,9 @@ namespace BillGameCore.Modules.Player.Presentation
 
             _view.SetMoveVelocity(new Vector2(velocityX, velocityY));
         }
+        public void Stop()
+        {
+            _view.SetMoveVelocity(Vector2.zero);
+        }
     }
 }

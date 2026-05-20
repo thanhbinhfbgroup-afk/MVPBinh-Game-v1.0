@@ -1,4 +1,4 @@
-﻿{
+{
     "name": "BillGameCore.Scenes",
     "rootNamespace": "",
     "references": [
@@ -8,7 +8,8 @@
         "BillGameCore.Modules.Input",
         "BillGameCore.Modules.Player",
         "BillGameCore.Modules.Enemy",
-        "VContainer"
+        "VContainer",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
