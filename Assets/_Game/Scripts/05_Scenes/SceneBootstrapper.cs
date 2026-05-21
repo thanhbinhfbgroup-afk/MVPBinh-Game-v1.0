@@ -1,12 +1,12 @@
-using BillGameCore.Modules.Input.Infrastructure;
-using BillGameCore.Modules.Player.Presentation;
 using BillGameCore.Modules.Input.Application;
 using BillGameCore.Modules.Input.Commands;
+using BillGameCore.Modules.Input.Infrastructure;
+using BillGameCore.Modules.Player.Presentation;
 using UnityEngine;
 
 namespace BillGameCore.Scenes
 {
-    public sealed class PlayerMoveTestBootstrap : MonoBehaviour
+    public sealed class SceneBootstrapper : MonoBehaviour
     {
         [SerializeField] private PlayerView _playerPrefab;
         [SerializeField] private float _moveSpeed = 5f;
@@ -16,19 +16,12 @@ namespace BillGameCore.Scenes
 
         private void Awake()
         {
-            // 1. Tạo ra cái kho chứa lệnh thuần C#
             var commandBuffer = new CommandBuffer();
-
-            // 2. Giao cái kho này cho nhà máy sản xuất (InputReader)
             _inputReader.SetCommandBuffer(commandBuffer);
 
-            // 3. Tạo ra người quản lý quầy giao dịch (Dispatcher) và đưa chìa khóa kho cho nó giữ
             var inputCommandSource = new InputCommandDispatcher(commandBuffer);
 
-            // 4. Khởi tạo thợ ráp nhân vật
             var spawner = new PlayerSpawner(_playerPrefab, _moveSpeed);
-
-            // 5. Ráp nhân vật và trao cho nhân vật cái "Cổng Port" (Chính là Dispatcher ẩn danh)
             _playerRuntime = spawner.Spawn(Vector2.zero, inputCommandSource);
         }
 
@@ -36,11 +29,10 @@ namespace BillGameCore.Scenes
         {
             _playerRuntime.Tick();
         }
-        
+
         private void OnDestroy()
         {
             _playerRuntime?.Dispose();
         }
     }
-
 }

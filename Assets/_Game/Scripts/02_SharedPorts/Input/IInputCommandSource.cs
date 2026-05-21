@@ -2,6 +2,8 @@ namespace BillGameCore.SharedPorts.Input
 {
     public interface IInputCommandSource
     {
-        IMoveCommand ReadMoveCommand();
+        bool HasCommands { get; }
+
+        bool TryDequeue(out ICommand command);
     }
 }

@@ -6,7 +6,7 @@ using UnityEngine.InputSystem;
 
 namespace BillGameCore.Modules.Input.Infrastructure
 {
-    public sealed class InputReader : MonoBehaviour, IInputCommandSource
+    public sealed class InputReader : MonoBehaviour
     {
         private const string PlayerActionMapName = "Player";
         private const string MoveActionName = "Move";
@@ -15,6 +15,22 @@ namespace BillGameCore.Modules.Input.Infrastructure
 
         private InputActionMap _playerActionMap;
         private InputAction _moveAction;
+        private CommandBuffer _commandBuffer;
+
+        public void SetCommandBuffer(CommandBuffer commandBuffer)
+        {
+            _commandBuffer = commandBuffer;
+        }
+        private void Update()
+        {
+            if (_commandBuffer == null)
+            {
+                throw new InvalidOperationException("InputReader requires a CommandBuffer before Update runs.");
+            }
+
+            var moveInput = _moveAction.ReadValue<Vector2>();
+            _commandBuffer.Enqueue(new MoveCommand(moveInput.x, moveInput.y));
+        }
 
         private void Awake()
         {
@@ -50,12 +66,6 @@ namespace BillGameCore.Modules.Input.Infrastructure
             {
                 throw new InvalidOperationException("InputReader could not find action 'Player/Move'.");
             }
-        }
-
-        public IMoveCommand ReadMoveCommand()
-        {
-            var moveInput = _moveAction.ReadValue<Vector2>();
-            return new MoveCommand(moveInput.x, moveInput.y);
         }
 
         private void CacheActions()
