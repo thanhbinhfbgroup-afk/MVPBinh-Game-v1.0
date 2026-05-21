@@ -25,7 +25,7 @@ namespace BillGameCore.Scenes
             _playerRuntime = spawner.Spawn(Vector2.zero, inputCommandSource);
         }
 
-        private void Update()
+        private void Update() 
         {
             _playerRuntime.Tick();
         }
