@@ -4,8 +4,11 @@ namespace BillGameCore.Modules.Input.Commands
 
 {
    public sealed class MoveCommand : IMoveCommand
+
     {
+        public CommandType Type => CommandType.Move;
         public MoveCommand(float dirX, float dirY)
+
         {
             DirX = dirX;
             DirY = dirY;

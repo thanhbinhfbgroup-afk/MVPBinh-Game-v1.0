@@ -1,4 +1,5 @@
 using BillGameCore.Modules.Player.Application;
+using BillGameCore.SharedPorts.Input;
 using UnityEngine;
 
 namespace BillGameCore.Modules.Player.Presentation
@@ -14,11 +15,11 @@ namespace BillGameCore.Modules.Player.Presentation
             _moveSpeed = moveSpeed;
         }
 
-        public PlayerRuntime Spawn(Vector2 position)
+        public PlayerRuntime Spawn(Vector2 position, IInputCommandSource inputCommandSource)
         {
             var view = Object.Instantiate(_prefab, position, Quaternion.identity);
             var application = new PlayerApplication(_moveSpeed);
-            var presenter = new PlayerPresenter(application, view);
+            var presenter = new PlayerPresenter(application, view, inputCommandSource);
 
             var runtime = new PlayerRuntime(presenter);
 

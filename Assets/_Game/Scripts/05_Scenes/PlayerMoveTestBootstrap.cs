@@ -1,8 +1,7 @@
-using BillGameCore.Modules.Input.Commands;
 using BillGameCore.Modules.Input.Infrastructure;
 using BillGameCore.Modules.Player.Presentation;
+using BillGameCore.SharedPorts.Input;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 namespace BillGameCore.Scenes
 {
@@ -17,15 +16,12 @@ namespace BillGameCore.Scenes
         private void Awake()
         {
             var spawner = new PlayerSpawner(_playerPrefab, _moveSpeed);
-            _playerRuntime = spawner.Spawn(Vector2.zero);
+            _playerRuntime = spawner.Spawn(Vector2.zero, _inputReader);
         }
 
         private void Update()
         {
-            var moveCommand = _inputReader.ReadMoveCommand();
-         
-
-            _playerRuntime.Tick(new Vector2(moveCommand.DirX, moveCommand.DirY));
+            _playerRuntime.Tick();
         }
         
         private void OnDestroy()

@@ -6,7 +6,7 @@ using UnityEngine.InputSystem;
 
 namespace BillGameCore.Modules.Input.Infrastructure
 {
-    public sealed class InputReader : MonoBehaviour
+    public sealed class InputReader : MonoBehaviour, IInputCommandSource
     {
         private const string PlayerActionMapName = "Player";
         private const string MoveActionName = "Move";
