@@ -22,6 +22,11 @@ namespace BillGameCore.Modules.Player.Presentation
             _presenter.Tick();
         }
 
+        public void SetOnDiedCallback(Action onDiedCallback)
+        {
+            _presenter.OnDiedCallback = onDiedCallback;
+        }
+
         public void Dispose()
         {
             if (_isDisposed)

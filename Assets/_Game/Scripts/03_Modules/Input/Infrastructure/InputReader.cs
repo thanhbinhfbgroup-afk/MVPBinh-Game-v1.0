@@ -1,8 +1,9 @@
 using System;
 using BillGameCore.Modules.Input.Commands;
-using BillGameCore.SharedPorts.Input;
+using BillGameCore.Core.ValueObjects;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using EntityId = BillGameCore.Core.ValueObjects.EntityId;
 
 namespace BillGameCore.Modules.Input.Infrastructure
 {
@@ -16,7 +17,17 @@ namespace BillGameCore.Modules.Input.Infrastructure
         private InputActionMap _playerActionMap;
         private InputAction _moveAction;
         private CommandBuffer _commandBuffer;
+        private EntityId _controlledEntityId;
 
+        public void SetControlledEntity(EntityId controlledEntityId)
+        {
+            if (!controlledEntityId.IsValid)
+            {
+                throw new InvalidOperationException("InputReader requires a valid controlled entity id.");
+            }
+
+            _controlledEntityId = controlledEntityId;
+        }
         public void SetCommandBuffer(CommandBuffer commandBuffer)
         {
             _commandBuffer = commandBuffer;
@@ -28,8 +39,13 @@ namespace BillGameCore.Modules.Input.Infrastructure
                 throw new InvalidOperationException("InputReader requires a CommandBuffer before Update runs.");
             }
 
+            if (!_controlledEntityId.IsValid)
+            {
+                throw new InvalidOperationException("InputReader requires a valid controlled entity before Update runs.");
+            }
+
             var moveInput = _moveAction.ReadValue<Vector2>();
-            _commandBuffer.Enqueue(new MoveCommand(moveInput.x, moveInput.y));
+            _commandBuffer.Enqueue(new MoveCommand(_controlledEntityId, moveInput.x, moveInput.y));
         }
 
         private void Awake()

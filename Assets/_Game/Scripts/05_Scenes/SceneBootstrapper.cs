@@ -11,6 +11,7 @@ namespace BillGameCore.Scenes
         [SerializeField] private PlayerView _playerPrefab;
         [SerializeField] private float _moveSpeed = 5f;
         [SerializeField] private InputReader _inputReader;
+        [SerializeField] private SceneController _sceneController;
 
         private PlayerRuntime _playerRuntime;
 
@@ -23,6 +24,7 @@ namespace BillGameCore.Scenes
 
             var spawner = new PlayerSpawner(_playerPrefab, _moveSpeed);
             _playerRuntime = spawner.Spawn(Vector2.zero, inputCommandSource);
+            _playerRuntime.SetOnDiedCallback(_sceneController.HandlePlayerDied);
         }
 
         private void Update() 
