@@ -1,3 +1,4 @@
+using BillGameCore.Core.ValueObjects;
 using BillGameCore.Modules.Player.Application;
 using BillGameCore.SharedPorts.Input;
 using UnityEngine;
@@ -17,11 +18,14 @@ namespace BillGameCore.Modules.Player.Presentation
 
         public PlayerRuntime Spawn(Vector2 position, IInputCommandSource inputCommandSource)
         {
+            
             var view = Object.Instantiate(_prefab, position, Quaternion.identity);
             var application = new PlayerApplication(_moveSpeed);
-            var presenter = new PlayerPresenter(application, view, inputCommandSource);
 
-            var runtime = new PlayerRuntime(presenter);
+            var id = BillEntityId.New();
+            var presenter = new PlayerPresenter(application, view, inputCommandSource, id);
+
+            var runtime = new PlayerRuntime(presenter,id);
 
             return runtime;
         }

@@ -1,5 +1,6 @@
 using BillGameCore.Modules.Player.Application;
 using BillGameCore.SharedPorts.Input;
+using BillGameCore.Core.ValueObjects;
 using UnityEngine;
 using System;
 
@@ -10,33 +11,48 @@ namespace BillGameCore.Modules.Player.Presentation
         private readonly PlayerApplication _application;
         private readonly PlayerView _view;     
         private readonly IInputCommandSource _inputCommandSource;
+        private readonly BillEntityId _entityId;
 
-        public PlayerPresenter(PlayerApplication application, PlayerView view, IInputCommandSource inputCommandSource)
+        public PlayerPresenter(PlayerApplication application, PlayerView view, IInputCommandSource inputCommandSource, BillEntityId entityId)
         {
             _application = application;
             _view = view;
+            _entityId = entityId;
             _inputCommandSource = inputCommandSource;
         }
 
         public void Tick()
         {
-            // LỚP 1: Kiểm tra xem kho có hàng không (Tránh mất thời gian)
-            if (!_inputCommandSource.HasCommands) return;
+            IMoveCommand latestMoveCommand = null;
 
-            // LỚP 2: Thực bốc hàng ra (Nếu bốc trượt vì lý do nào đó, dừng lại)
-            if (!_inputCommandSource.TryDequeue(out var command)) return;
+            while (_inputCommandSource.TryDequeue(out var command))
+            {
+                if (command.Type != CommandType.Move)
+                {
+                    continue;
+                }
 
-            // LỚP 3: Kiểm tra ý nghĩa (Ý đồ người chơi)
-            // "Tôi chỉ muốn xử lý di chuyển ở đây, nếu nhãn là Attack thì tôi không nuốt"
-            if (command.Type != CommandType.Move) return;
+                if (command.ControlledEntityId != _entityId)
+                {
+                    continue;
+                }
 
-            // LỚP 4: Kiểm tra hình dáng contract (Shape dữ liệu)
-            // "Nhãn là Move rồi, nhưng cái xác có đúng là interface IMoveCommand để tôi lấy DirX, DirY không?"
-            if (command is not IMoveCommand moveCommand) return;
+                if (command is not IMoveCommand moveCommand)
+                {
+                    continue;
+                }
+
+                latestMoveCommand = moveCommand;
+            }
+
+            if (latestMoveCommand == null)
+            {
+                return;
+            }
 
             _application.ComputeMoveVelocity(
-                moveCommand.DirX,
-                moveCommand.DirY,
+                latestMoveCommand.DirX,
+                latestMoveCommand.DirY,
                 out var velocityX,
                 out var velocityY);
 

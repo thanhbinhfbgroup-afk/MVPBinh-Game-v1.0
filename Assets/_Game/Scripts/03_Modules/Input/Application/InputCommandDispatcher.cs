@@ -12,8 +12,6 @@ namespace BillGameCore.Modules.Input.Application
             _commandBuffer = commandBuffer;
         }
 
-        public bool HasCommands => _commandBuffer.HasCommands;
-
         public bool TryDequeue(out ICommand command)
         {
             return _commandBuffer.TryDequeue(out command);

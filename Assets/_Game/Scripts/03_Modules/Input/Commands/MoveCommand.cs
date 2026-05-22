@@ -8,8 +8,8 @@ namespace BillGameCore.Modules.Input.Commands
 
     {
         public CommandType Type => CommandType.Move;
-        public EntityId ControlledEntityId { get; }
-        public MoveCommand(EntityId controlledEntityId, float dirX, float dirY)
+        public BillEntityId ControlledEntityId { get; }
+        public MoveCommand(BillEntityId controlledEntityId, float dirX, float dirY)
         {
             ControlledEntityId = controlledEntityId;
             DirX = dirX;

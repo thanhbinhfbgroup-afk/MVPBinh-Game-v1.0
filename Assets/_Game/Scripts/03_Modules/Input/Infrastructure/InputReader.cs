@@ -3,23 +3,19 @@ using BillGameCore.Modules.Input.Commands;
 using BillGameCore.Core.ValueObjects;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using EntityId = BillGameCore.Core.ValueObjects.EntityId;
+using BillGameCore.Modules.Input.Context;
 
 namespace BillGameCore.Modules.Input.Infrastructure
 {
     public sealed class InputReader : MonoBehaviour
     {
-        private const string PlayerActionMapName = "Player";
-        private const string MoveActionName = "Move";
-
         [SerializeField] private InputActionAsset _actions;
 
-        private InputActionMap _playerActionMap;
-        private InputAction _moveAction;
+        private InputActionGateway _inputActionGateway;
         private CommandBuffer _commandBuffer;
-        private EntityId _controlledEntityId;
+        private BillEntityId _controlledEntityId;
 
-        public void SetControlledEntity(EntityId controlledEntityId)
+        public void SetControlledEntity(BillEntityId controlledEntityId)
         {
             if (!controlledEntityId.IsValid)
             {
@@ -34,6 +30,10 @@ namespace BillGameCore.Modules.Input.Infrastructure
         }
         private void Update()
         {
+            ReadPlayerMap();
+        }
+        private void ReadPlayerMap()
+        {
             if (_commandBuffer == null)
             {
                 throw new InvalidOperationException("InputReader requires a CommandBuffer before Update runs.");
@@ -41,27 +41,36 @@ namespace BillGameCore.Modules.Input.Infrastructure
 
             if (!_controlledEntityId.IsValid)
             {
-                throw new InvalidOperationException("InputReader requires a valid controlled entity before Update runs.");
+                throw new InvalidOperationException("InputReader requires a controlled entity id before Update runs.");
             }
 
-            var moveInput = _moveAction.ReadValue<Vector2>();
-            _commandBuffer.Enqueue(new MoveCommand(_controlledEntityId, moveInput.x, moveInput.y));
+            var moveInput = _inputActionGateway.ReadMoveInput();
+            var dirX = moveInput.x;
+            var dirY = moveInput.y;
+
+            _commandBuffer.Enqueue(new MoveCommand(_controlledEntityId, dirX, dirY));
         }
 
         private void Awake()
         {
             ValidateConfiguration();
-            CacheActions();
+            _inputActionGateway = new InputActionGateway(_actions);
+       
         }
 
         private void OnEnable()
         {
-            _playerActionMap.Enable();
+            _inputActionGateway?.EnablePlayerMap();
         }
 
         private void OnDisable()
         {
-            _playerActionMap.Disable();
+            _inputActionGateway?.DisablePlayerMap();
+        }
+
+        private void OnDestroy()
+        {
+            _inputActionGateway?.Dispose();
         }
 
         public void ValidateConfiguration()
@@ -71,23 +80,17 @@ namespace BillGameCore.Modules.Input.Infrastructure
                 throw new InvalidOperationException("InputReader requires an InputActionAsset.");
             }
 
-            var playerActionMap = _actions.FindActionMap(PlayerActionMapName, throwIfNotFound: false);
+            var playerActionMap = _actions.FindActionMap(InputContextNames.Player, throwIfNotFound: false);
             if (playerActionMap == null)
             {
                 throw new InvalidOperationException("InputReader could not find action map 'Player'.");
             }
 
-            var moveAction = playerActionMap.FindAction(MoveActionName, throwIfNotFound: false);
+            var moveAction = playerActionMap.FindAction("Move", throwIfNotFound: false);
             if (moveAction == null)
             {
                 throw new InvalidOperationException("InputReader could not find action 'Player/Move'.");
             }
-        }
-
-        private void CacheActions()
-        {
-            _playerActionMap = _actions.FindActionMap(PlayerActionMapName, throwIfNotFound: true);
-            _moveAction = _playerActionMap.FindAction(MoveActionName, throwIfNotFound: true);
         }
     }
 }

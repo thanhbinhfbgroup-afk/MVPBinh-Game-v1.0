@@ -1,4 +1,5 @@
 using System;
+using BillGameCore.Core.ValueObjects;
 
 namespace BillGameCore.Modules.Player.Presentation
 {
@@ -7,9 +8,12 @@ namespace BillGameCore.Modules.Player.Presentation
         private readonly PlayerPresenter _presenter;
         private bool _isDisposed;
 
-        public PlayerRuntime(PlayerPresenter presenter)
+        public BillEntityId Id { get; }
+
+        public PlayerRuntime(PlayerPresenter presenter, BillEntityId id)
         {
             _presenter = presenter;
+            Id = id;
         }
 
         public void Tick()

@@ -170,7 +170,7 @@ Core là BCL-only. `BillGameCore.Core.asmdef` phải luôn có:
 Core hiện gồm:
 
 ```text
-Core/ValueObjects/EntityId.cs
+Core/ValueObjects/BillEntityId.cs
 Core/Combat/DamageInfo.cs
 Core/Combat/DamageResult.cs
 Core/Combat/IDamageReceiver.cs
@@ -182,11 +182,11 @@ Core/Save/ISaveSnapshotConsumer.cs
 ```
 
 Quy tắc Core:
-- `EntityId.New()` chỉ gọi trong spawner/binder nơi entity instance được tạo.
-- `EntityId` dùng `Guid`, có `Invalid`, `IsValid`, constructor private, và `ToString()` rút gọn để log/debug dễ đọc.
+- `BillEntityId.New()` chỉ gọi trong spawner/binder nơi entity instance được tạo.
+- `BillEntityId` dùng `Guid`, có `Invalid`, `IsValid`, constructor private, và `ToString()` rút gọn để log/debug dễ đọc.
 - `IDamageReceiver.ReceiveDamage()` là contract combat duy nhất cho nhận damage.
 - `ReceiveDamage()` implementations phải clamp damage âm về `0` trước khi trừ máu. Heal/buff không đi qua `DamageInfo`.
-- `DamageInfo` baseline dùng `float Amount`, `EntityId SourceId`, `bool IsCritical`.
+- `DamageInfo` baseline dùng `float Amount`, `BillEntityId SourceId`, `bool IsCritical`.
 - `DamageResult` baseline dùng `float AppliedDamage`, `float RemainingHealth`, `bool JustDied`.
 - `IInteractable` được implement bởi binder/presentation object, không bởi Application.
 - `RewardBundle` là DTO reward dùng bởi enemy/death/reward flow.
@@ -218,7 +218,7 @@ Quy tắc:
 - Concrete commands nằm trong `Modules/Input/Commands`.
 - Concrete commands implement interfaces từ `SharedPorts/Input`.
 - Consumer ngoài module Input chỉ dùng `ICommand`, `IMoveCommand`, `IAttackCommand`, `IInteractCommand`, `CommandType`.
-- `ICommand` dùng `EntityId ControlledEntityId`, không dùng `TargetId` hoặc `SourceId` cho input command.
+- `ICommand` dùng `BillEntityId ControlledEntityId`, không dùng `TargetId` hoặc `SourceId` cho input command.
 - `CommandType` phải có `None = 0`, sau đó `Move = 1`, `Attack = 2`, `Interact = 3`, `SwitchContext = 4`. Không đánh số lại sau khi đã có replay/save.
 - `IMoveCommand` expose `DirX`, `DirY`, `IsMoving`.
 - `IAttackCommand` expose `IsHeld`, `HeldDuration`.
@@ -438,7 +438,7 @@ Rules:
 - `InputContextNames` là nơi duy nhất trong module Input gom tên action map: `Player`, `UI`, `Vehicle`.
 - `InputReader` là MonoBehaviour, giữ serialized `InputActionAsset`, dùng `InputActionGateway` để đọc New Input System và dịch raw input thành command object.
 - `InputReader` nhận `CommandBuffer` qua `[Inject]`.
-- `InputReader.SetControlledEntity(EntityId)` phải validate `EntityId.IsValid`.
+- `InputReader.SetControlledEntity(BillEntityId)` phải validate `BillEntityId.IsValid`.
 - `InputReader.ReadPlayerMap()` enqueue `MoveCommand` mỗi frame, kể cả khi không di chuyển, để consumer có thể set velocity về `0`.
 - `InputReader` có fallback editor-only để tự gán `Assets/Settings/InputSystem_Actions.inputactions` nếu `_actions` bị null trong Editor sau refresh scene/script. Đây chỉ là safety net cho baseline scene, không phải service locator runtime. Khi dự án có nhiều scene hoặc nhiều input asset, từng scene phải gán `_actions` rõ ràng hoặc dùng scene/input config được duyệt.
 - Không gắn `PlayerInput` component vào scene object `Input`.
@@ -504,7 +504,7 @@ Domain không dùng UnityEngine.
 - implement `IPlayerReadService`.
 - không dùng UnityEngine.
 - không biết world position.
-- `OnDied` chỉ emit `EntityId` và `RewardBundle`.
+- `OnDied` chỉ emit `BillEntityId` và `RewardBundle`.
 
 ### Presentation
 
@@ -518,12 +518,12 @@ Domain không dùng UnityEngine.
 - đọc input qua `IInputCommandSource`.
 - không biết concrete command classes.
 - lấy world position từ `PlayerView.WorldPosition` khi player chết.
-- gọi `OnDiedCallback(EntityId, RewardBundle, Vector2)` cho scene layer.
+- gọi `OnDiedCallback(BillEntityId, RewardBundle, Vector2)` cho scene layer.
 - nhận `InteractCommand` thì interact với target đang overlap hiện tại; không dùng pending flag phụ thuộc đúng frame `OnTriggerEnter2D`.
 
 `PlayerSpawner`:
 - có đúng 1 public constructor để VContainer resolve rõ ràng.
-- gọi `EntityId.New()`.
+- gọi `BillEntityId.New()`.
 - tạo `PlayerDefinition`, `PlayerState`, `PlayerApplication`, `PlayerPresenter`, `PlayerRuntime`.
 - instantiate `PlayerView` bằng `Object.Instantiate` vì `PlayerView` hiện không có `[Inject]`.
 
@@ -537,10 +537,10 @@ Player death flow:
 ```text
 Combat/Application gọi PlayerApplication.ReceiveDamage()
   -> clamp damage âm về 0
-  -> nếu chết: PlayerApplication.OnDied(EntityId, RewardBundle)
+  -> nếu chết: PlayerApplication.OnDied(BillEntityId, RewardBundle)
     -> PlayerPresenter.HandleDied()
       -> lấy PlayerView.WorldPosition
-      -> OnDiedCallback(EntityId, RewardBundle, Vector2)
+      -> OnDiedCallback(BillEntityId, RewardBundle, Vector2)
         -> SceneController.HandlePlayerDied()
 ```
 
@@ -659,7 +659,7 @@ Modules/Enemy/Presentation/EnemyRuntime.cs
 - không implement `IPlayerReadService`.
 - không dùng UnityEngine.
 - không biết world position.
-- `OnDied` chỉ emit `EntityId` và `RewardBundle`.
+- `OnDied` chỉ emit `BillEntityId` và `RewardBundle`.
 - tạo `RewardBundle` từ reward config trong `EnemyDefinition`.
 
 ### Presentation
@@ -673,11 +673,11 @@ Modules/Enemy/Presentation/EnemyRuntime.cs
 - không đọc player input.
 - không biết concrete command classes.
 - lấy world position từ `EnemyView.WorldPosition` khi enemy chết.
-- gọi `OnDiedCallback(EntityId, RewardBundle, Vector2)` cho scene layer.
+- gọi `OnDiedCallback(BillEntityId, RewardBundle, Vector2)` cho scene layer.
 
 `EnemySpawner`:
 - có đúng 1 public constructor để VContainer resolve rõ ràng.
-- gọi `EntityId.New()`.
+- gọi `BillEntityId.New()`.
 - tạo `EnemyDefinition`, `EnemyState`, `EnemyApplication`, `EnemyPresenter`, `EnemyRuntime`.
 - instantiate `EnemyView` bằng `Object.Instantiate` vì `EnemyView` hiện không có `[Inject]`.
 
@@ -696,9 +696,9 @@ Approved enemy death flow:
 ```text
 EnemyApplication.ReceiveDamage()
   -> clamp damage âm về 0
-  -> OnDied(EntityId, RewardBundle)
+  -> OnDied(BillEntityId, RewardBundle)
     -> EnemyPresenter lấy EnemyView.WorldPosition
-    -> OnDiedCallback(EntityId, RewardBundle, Vector2)
+    -> OnDiedCallback(BillEntityId, RewardBundle, Vector2)
       -> SceneController.HandleEnemyDied()
         -> IRewardGrantService.Grant(bundle) nếu EconomyService đã tồn tại
         -> LootSpawner.Spawn(...) khi Loot được build
@@ -854,7 +854,7 @@ Consumer uses IInventoryWriteService
 | R15 | Domain/Application không dùng UnityEngine. |
 | R16 | Chỉ InputReader được enqueue command. |
 | R17 | Prefab có `[Inject]` phải instantiate qua `container.Instantiate()`. |
-| R18 | `EntityId.New()` CHỈ được gọi từ Spawner/Binder nơi tạo entity instance. |
+| R18 | `BillEntityId.New()` CHỈ được gọi từ Spawner/Binder nơi tạo entity instance. |
 | R19 | Player death và Enemy death là hai handler riêng trong SceneController. |
 | R20 | Active scene startup nằm trong Scenes, không nằm trong Composition. |
 | R21 | Input runtime không dùng `PlayerInput` component và không dùng Generate C# wrapper; `InputReader` phải đi qua `InputActionGateway`. |

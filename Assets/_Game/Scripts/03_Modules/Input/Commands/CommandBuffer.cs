@@ -6,7 +6,6 @@ namespace BillGameCore.Modules.Input.Commands
     public sealed class CommandBuffer
     {
         private readonly Queue<ICommand> _commands = new();
-        public bool HasCommands => _commands.Count > 0;
 
         public void Enqueue(ICommand command)
         {

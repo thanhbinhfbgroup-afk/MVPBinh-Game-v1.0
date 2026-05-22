@@ -5,6 +5,6 @@ namespace BillGameCore.SharedPorts.Input
     public interface ICommand
     {
         CommandType Type { get; }
-        EntityId ControlledEntityId { get; }
+        BillEntityId ControlledEntityId { get; }
     }
 }

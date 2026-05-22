@@ -24,6 +24,7 @@ namespace BillGameCore.Scenes
 
             var spawner = new PlayerSpawner(_playerPrefab, _moveSpeed);
             _playerRuntime = spawner.Spawn(Vector2.zero, inputCommandSource);
+            _inputReader.SetControlledEntity(_playerRuntime.Id);
             _playerRuntime.SetOnDiedCallback(_sceneController.HandlePlayerDied);
         }
 
