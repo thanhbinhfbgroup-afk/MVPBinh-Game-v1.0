@@ -3,6 +3,7 @@ using BillGameCore.Modules.Input.Commands;
 using BillGameCore.Modules.Input.Context;
 using BillGameCore.Modules.Input.Infrastructure;
 using BillGameCore.Modules.Player.Presentation;
+using BillGameCore.SharedPorts.Input;
 using UnityEngine;
 
 namespace BillGameCore.Scenes
@@ -19,14 +20,14 @@ namespace BillGameCore.Scenes
         [ContextMenu("Debug/Switch Context To Player")]
         private void DebugSwitchContextToPlayer()
         {
-            var command = new SwitchContextCommand(_playerRuntime.Id, InputContextNames.Player);
+            var command = new SwitchContextCommand(_playerRuntime.Id, InputContext.Player);
             _inputReader.ConsumeSwitchContext(command);
         }
 
         [ContextMenu("Debug/Switch Context To UI")]
         private void DebugSwitchContextToUI()
         {
-            var command = new SwitchContextCommand(_playerRuntime.Id, InputContextNames.UI);
+            var command = new SwitchContextCommand(_playerRuntime.Id, InputContext.UI);
             _inputReader.ConsumeSwitchContext(command);
         }
         private void Awake()

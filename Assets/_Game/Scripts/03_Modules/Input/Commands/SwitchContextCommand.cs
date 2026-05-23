@@ -5,7 +5,7 @@ namespace BillGameCore.Modules.Input.Commands
 {
     public sealed class SwitchContextCommand : ICommand
     {
-        public SwitchContextCommand(BillEntityId controlledEntityId, string targetContext)
+        public SwitchContextCommand(BillEntityId controlledEntityId, InputContext targetContext)
         {
             ControlledEntityId = controlledEntityId;
             TargetContext = targetContext;
@@ -15,6 +15,6 @@ namespace BillGameCore.Modules.Input.Commands
 
         public BillEntityId ControlledEntityId { get; }
 
-        public string TargetContext { get; }
+        public InputContext TargetContext { get; }
     }
 }

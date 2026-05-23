@@ -1,5 +1,6 @@
-﻿using System;
-using BillGameCore.Modules.Input.Context;
+﻿using BillGameCore.Modules.Input.Context;
+using BillGameCore.SharedPorts.Input;
+using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -11,7 +12,7 @@ namespace BillGameCore.Modules.Input.Infrastructure
         private readonly InputActionMap _playerActionMap;
         private readonly InputAction _moveAction;
 
-        public string CurrentContext { get; private set; }
+        public InputContext CurrentContext { get; private set; }
 
         public InputActionGateway(InputActionAsset actions)
         {
@@ -25,57 +26,58 @@ namespace BillGameCore.Modules.Input.Infrastructure
             _moveAction = _playerActionMap.FindAction("Move", throwIfNotFound: true);
         }
 
-        public void SwitchContext(string contextName)
+        // Hàm chuyển đổi ngữ cảnh (Nhận vào struct InputContext an toàn)
+        public void SwitchContext(InputContext context)
         {
-            // CHẶN: Tên rác, trống rỗng
-            if (string.IsNullOrWhiteSpace(contextName))
+            // CHẶN: Nếu ngữ cảnh truyền vào là Rỗng/Vô giá trị -> Nổ lỗi ngay
+            if (context == InputContext.None)
             {
-                throw new InvalidOperationException("Input context name cannot be null or empty.");
+                throw new InvalidOperationException("Input context cannot be None.");
             }
 
-            // CHẶN: Trùng ngữ cảnh cũ -> Thoát luôn cho nhẹ máy
-            if (contextName == CurrentContext)
+            // CHẶN: Nếu trùng khớp với ngữ cảnh hiện tại -> Thoát luôn cho nhẹ máy
+            if (context == CurrentContext)
             {
                 return;
             }
 
-            // TẮT: Sơ đồ phím hành động của Player hiện tại
+            // TẮT: Ngắt hoàn toàn sơ đồ phím hành động của Player hiện tại
             _playerActionMap.Disable();
 
-            // BẮT ĐẦU: Rẽ nhánh bẻ lái đường ray phím bấm
-            switch (contextName)
+            // BẮT ĐẦU: Rẽ nhánh để kích hoạt map phím mới
+            switch (context)
             {
-                // Case Player: Bật phím di chuyển + Đổi biển trạng thái
-                case InputContextNames.Player:
+                // Case Player: Bật phím di chuyển + Đổi biển trạng thái hệ thống
+                case InputContext.Player:
                     _playerActionMap.Enable();
-                    CurrentContext = InputContextNames.Player;
+                    CurrentContext = InputContext.Player;
                     return;
 
-                // Case tương lai (UI/Xe): Chặn đứng vì hiện tại chưa viết code
-                case InputContextNames.UI:
-                case InputContextNames.Vehicle:
-                    throw new InvalidOperationException($"Input context '{contextName}' is not supported yet.");
+                // Case tương lai (UI/Xe cộ): Chặn đứng vì hiện tại chưa viết code xử lý
+                case InputContext.UI:
+                case InputContext.Vehicle:
+                    throw new InvalidOperationException($"Input context '{context}' is not supported yet.");
 
-                // Case bậy bạ: Nổ lỗi vì tên lạ hoắc không có trong thiết kế
+                // Case bậy bạ: Báo động nếu lọt vào một ngữ cảnh lạ hoắc ngoài thiết kế
                 default:
-                    throw new InvalidOperationException($"Unknown input context '{contextName}'.");
+                    throw new InvalidOperationException($"Unknown input context '{context}'.");
             }
         }
 
         public void EnablePlayerMap()
         {
-            SwitchContext(InputContextNames.Player);
+            SwitchContext(InputContext.Player);
         }
 
         public void DisablePlayerMap()
         {
             _playerActionMap.Disable();
-            CurrentContext = string.Empty;
+            CurrentContext = InputContext.None;
         }
 
         public Vector2 ReadMoveInput()
         {
-            if (CurrentContext != InputContextNames.Player)
+            if (CurrentContext != InputContext.Player)
             {
                 throw new InvalidOperationException(
                     $"Cannot read move input when current context is '{CurrentContext}'.");
