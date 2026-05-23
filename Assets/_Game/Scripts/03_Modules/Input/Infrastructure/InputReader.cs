@@ -53,6 +53,21 @@ namespace BillGameCore.Modules.Input.Infrastructure
             _commandBuffer.Enqueue(new MoveCommand(_controlledEntityId, dirX, dirY));
         }
 
+        public void ConsumeSwitchContext(SwitchContextCommand command)
+        {
+            if (command == null)
+            {
+                throw new InvalidOperationException("SwitchContextCommand cannot be null.");
+            }
+
+            if (command.ControlledEntityId != _controlledEntityId)
+            {
+                return;
+            }
+
+            _inputActionGateway.SwitchContext(command.TargetContext);
+        }
+
         private void Awake()
         {
             _inputActionGateway = new InputActionGateway(_actions);

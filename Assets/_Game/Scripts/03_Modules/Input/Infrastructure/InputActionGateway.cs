@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using BillGameCore.Modules.Input.Context;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -27,29 +27,36 @@ namespace BillGameCore.Modules.Input.Infrastructure
 
         public void SwitchContext(string contextName)
         {
+            // CHẶN: Tên rác, trống rỗng
             if (string.IsNullOrWhiteSpace(contextName))
             {
                 throw new InvalidOperationException("Input context name cannot be null or empty.");
             }
 
+            // CHẶN: Trùng ngữ cảnh cũ -> Thoát luôn cho nhẹ máy
             if (contextName == CurrentContext)
             {
                 return;
             }
 
+            // TẮT: Sơ đồ phím hành động của Player hiện tại
             _playerActionMap.Disable();
 
+            // BẮT ĐẦU: Rẽ nhánh bẻ lái đường ray phím bấm
             switch (contextName)
             {
+                // Case Player: Bật phím di chuyển + Đổi biển trạng thái
                 case InputContextNames.Player:
                     _playerActionMap.Enable();
                     CurrentContext = InputContextNames.Player;
                     return;
 
+                // Case tương lai (UI/Xe): Chặn đứng vì hiện tại chưa viết code
                 case InputContextNames.UI:
                 case InputContextNames.Vehicle:
                     throw new InvalidOperationException($"Input context '{contextName}' is not supported yet.");
 
+                // Case bậy bạ: Nổ lỗi vì tên lạ hoắc không có trong thiết kế
                 default:
                     throw new InvalidOperationException($"Unknown input context '{contextName}'.");
             }
