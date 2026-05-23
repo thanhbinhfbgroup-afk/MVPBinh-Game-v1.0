@@ -28,7 +28,7 @@ namespace BillGameCore.Scenes
             _playerRuntime.SetOnDiedCallback(_sceneController.HandlePlayerDied);
         }
 
-        private void Update() 
+        private void Update()
         {
             _playerRuntime.Tick();
         }

@@ -1,9 +1,8 @@
 using System;
-using BillGameCore.Modules.Input.Commands;
 using BillGameCore.Core.ValueObjects;
+using BillGameCore.Modules.Input.Commands;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using BillGameCore.Modules.Input.Context;
 
 namespace BillGameCore.Modules.Input.Infrastructure
 {
@@ -24,14 +23,17 @@ namespace BillGameCore.Modules.Input.Infrastructure
 
             _controlledEntityId = controlledEntityId;
         }
+
         public void SetCommandBuffer(CommandBuffer commandBuffer)
         {
             _commandBuffer = commandBuffer;
         }
+
         private void Update()
         {
             ReadPlayerMap();
         }
+
         private void ReadPlayerMap()
         {
             if (_commandBuffer == null)
@@ -53,9 +55,7 @@ namespace BillGameCore.Modules.Input.Infrastructure
 
         private void Awake()
         {
-            ValidateConfiguration();
             _inputActionGateway = new InputActionGateway(_actions);
-       
         }
 
         private void OnEnable()
@@ -73,24 +73,14 @@ namespace BillGameCore.Modules.Input.Infrastructure
             _inputActionGateway?.Dispose();
         }
 
-        public void ValidateConfiguration()
+        public InputActionGateway ValidateConfiguration()
         {
             if (_actions == null)
             {
                 throw new InvalidOperationException("InputReader requires an InputActionAsset.");
             }
 
-            var playerActionMap = _actions.FindActionMap(InputContextNames.Player, throwIfNotFound: false);
-            if (playerActionMap == null)
-            {
-                throw new InvalidOperationException("InputReader could not find action map 'Player'.");
-            }
-
-            var moveAction = playerActionMap.FindAction("Move", throwIfNotFound: false);
-            if (moveAction == null)
-            {
-                throw new InvalidOperationException("InputReader could not find action 'Player/Move'.");
-            }
+            return new InputActionGateway(_actions);
         }
     }
 }

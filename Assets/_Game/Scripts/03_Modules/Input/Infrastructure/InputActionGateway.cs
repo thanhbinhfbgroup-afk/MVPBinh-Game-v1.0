@@ -11,32 +11,69 @@ namespace BillGameCore.Modules.Input.Infrastructure
         private readonly InputActionMap _playerActionMap;
         private readonly InputAction _moveAction;
 
+        public string CurrentContext { get; private set; }
+
         public InputActionGateway(InputActionAsset actions)
         {
             if (actions == null)
             {
                 throw new InvalidOperationException("InputActionGateway requires an InputActionAsset.");
             }
-            // Nhân bản cấu hình phím thành bản sao trên RAM(Runtime).
-            // Giúp cô lập dữ liệu: chỉnh sửa phím khi chơi không bị ghi đè/làm hỏng file Asset gốc trên ổ cứng.
-            _runtimeActions = UnityEngine.Object.Instantiate(actions);
 
+            _runtimeActions = UnityEngine.Object.Instantiate(actions);
             _playerActionMap = _runtimeActions.FindActionMap(InputContextNames.Player, throwIfNotFound: true);
             _moveAction = _playerActionMap.FindAction("Move", throwIfNotFound: true);
         }
 
+        public void SwitchContext(string contextName)
+        {
+            if (string.IsNullOrWhiteSpace(contextName))
+            {
+                throw new InvalidOperationException("Input context name cannot be null or empty.");
+            }
+
+            if (contextName == CurrentContext)
+            {
+                return;
+            }
+
+            _playerActionMap.Disable();
+
+            switch (contextName)
+            {
+                case InputContextNames.Player:
+                    _playerActionMap.Enable();
+                    CurrentContext = InputContextNames.Player;
+                    return;
+
+                case InputContextNames.UI:
+                case InputContextNames.Vehicle:
+                    throw new InvalidOperationException($"Input context '{contextName}' is not supported yet.");
+
+                default:
+                    throw new InvalidOperationException($"Unknown input context '{contextName}'.");
+            }
+        }
+
         public void EnablePlayerMap()
         {
-            _playerActionMap.Enable();
+            SwitchContext(InputContextNames.Player);
         }
 
         public void DisablePlayerMap()
         {
             _playerActionMap.Disable();
+            CurrentContext = string.Empty;
         }
 
         public Vector2 ReadMoveInput()
         {
+            if (CurrentContext != InputContextNames.Player)
+            {
+                throw new InvalidOperationException(
+                    $"Cannot read move input when current context is '{CurrentContext}'.");
+            }
+
             return _moveAction.ReadValue<Vector2>();
         }
 
@@ -44,7 +81,7 @@ namespace BillGameCore.Modules.Input.Infrastructure
         {
             if (_runtimeActions != null)
             {
-                UnityEngine.Object.Destroy(_runtimeActions); // Dọn sạch bản sao trên RAM, trả lại bộ nhớ cho máy tính
+                UnityEngine.Object.Destroy(_runtimeActions);
             }
         }
     }
