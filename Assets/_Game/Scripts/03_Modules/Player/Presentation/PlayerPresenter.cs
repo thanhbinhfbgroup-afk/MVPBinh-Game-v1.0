@@ -47,8 +47,8 @@ namespace BillGameCore.Modules.Player.Presentation
                     continue;
                 }
 
-                if (command.Type == CommandType.Interact
-                    && command is IInteractCommand interactCommand
+                if (command.Type == CommandType.Interact // Thùng thư báo: "Có thư tương tác nè!"
+                    && command is IInteractCommand interactCommand 
                     && interactCommand.IsPerformed)
                 {
                     interactRequested = true;
@@ -75,6 +75,7 @@ namespace BillGameCore.Modules.Player.Presentation
         public void Stop()
         {
             _view.SetMoveVelocity(Vector2.zero);
+            //HỦY ĐĂNG KÝ EVENT ĐỂ DỌN DẸP BỘ NHỚ RAM
             _view.TriggerEntered -= HandleTriggerEntered;
             _view.TriggerExited -= HandleTriggerExited;
         }
@@ -105,17 +106,17 @@ namespace BillGameCore.Modules.Player.Presentation
         }
 
         private void TryInteract()
-        {
+        {   // Việc 1: Check null target
             if (_currentInteractable == null)
             {
                 return;
             }
-
+            // Việc 2: Check điều kiện có được tương tác không
             if (!_currentInteractable.CanInteract())
             {
                 return;
             }
-
+            // Việc 3: Gọi tương tác thực tế
             _currentInteractable.Interact();
         }
     }
