@@ -11,7 +11,6 @@ namespace BillGameCore.Modules.Input.Infrastructure
         private readonly InputActionAsset _runtimeActions;
         private readonly InputActionMap _playerActionMap;
         private readonly InputAction _moveAction;
-
         public InputContext CurrentContext { get; private set; }
 
         public InputActionGateway(InputActionAsset actions)
