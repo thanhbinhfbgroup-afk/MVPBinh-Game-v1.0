@@ -51,6 +51,11 @@ namespace BillGameCore.Modules.Input.Infrastructure
             var dirY = moveInput.y;
 
             _commandBuffer.Enqueue(new MoveCommand(_controlledEntityId, dirX, dirY));
+
+            if (_inputActionGateway.WasInteractPerformedThisFrame())
+            {
+                _commandBuffer.Enqueue(new InteractCommand(_controlledEntityId, isPerformed: true));
+            }
         }
 
         public void ConsumeSwitchContext(SwitchContextCommand command)

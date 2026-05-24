@@ -11,6 +11,7 @@ namespace BillGameCore.Modules.Input.Infrastructure
         private readonly InputActionAsset _runtimeActions;
         private readonly InputActionMap _playerActionMap;
         private readonly InputAction _moveAction;
+        private readonly InputAction _interactAction;
         public InputContext CurrentContext { get; private set; }
 
         public InputActionGateway(InputActionAsset actions)
@@ -23,6 +24,7 @@ namespace BillGameCore.Modules.Input.Infrastructure
             _runtimeActions = UnityEngine.Object.Instantiate(actions);
             _playerActionMap = _runtimeActions.FindActionMap(InputContextNames.Player, throwIfNotFound: true);
             _moveAction = _playerActionMap.FindAction("Move", throwIfNotFound: true);
+            _interactAction = _playerActionMap.FindAction("Interact", throwIfNotFound: true);
         }
 
         // Hàm chuyển đổi ngữ cảnh (Nhận vào struct InputContext an toàn)
@@ -84,7 +86,16 @@ namespace BillGameCore.Modules.Input.Infrastructure
 
             return _moveAction.ReadValue<Vector2>();
         }
+        public bool WasInteractPerformedThisFrame()
+        {
+            if (CurrentContext != InputContext.Player)
+            {
+                throw new InvalidOperationException(
+                    $"Cannot read interact input when current context is '{CurrentContext}'.");
+            }
 
+            return _interactAction.WasPerformedThisFrame();
+        }
         public void Dispose()
         {
             if (_runtimeActions != null)
