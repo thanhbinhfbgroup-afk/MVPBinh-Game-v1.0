@@ -60,6 +60,7 @@
   <Project Path="Unity.Multiplayer.Center.Common.csproj" />
   <Project Path="Assembly-CSharp.csproj" />
   <Project Path="BillGameCore.Modules.Input.csproj" />
+  <Project Path="BillGameCore.Modules.InteractionGroup.csproj" />
   <Project Path="Unity.RenderPipelines.Core.Runtime.Shared.csproj" />
   <Project Path="Unity.InputSystem.ForUI.csproj" />
   <Project Path="Unity.Collections.CodeGen.csproj" />
