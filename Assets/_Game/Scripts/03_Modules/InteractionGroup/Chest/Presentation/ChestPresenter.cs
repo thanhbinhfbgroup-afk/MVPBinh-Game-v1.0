@@ -24,16 +24,16 @@ namespace BillGameCore.Modules.InteractionGroup.Chest.Presentation
             _view.SetOpened(_application.IsOpened);
         }
 
-        public bool TryInteract()
+        public ChestOpenResult TryInteract()
         {
             var result = _application.TryOpen();
             if (!result.IsOpenedNow)
             {
-                return false;
+                return result;
             }
 
             _view.SetOpened(_application.IsOpened);
-            return true;
+            return result;
         }
     }
 }
