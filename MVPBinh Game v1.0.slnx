@@ -84,6 +84,7 @@
   <Project Path="Unity.CollabProxy.Editor.csproj" />
   <Project Path="BillGameCore.Core.csproj" />
   <Project Path="Unity.RenderPipeline.Universal.ShaderLibrary.csproj" />
+  <Project Path="BillGameCore.Modules.Economy.csproj" />
   <Project Path="Unity.InternalAPIEngineBridge.004.csproj" />
   <Project Path="Unity.InputSystem.DocCodeSamples.csproj" />
   <Project Path="Unity.RenderPipelines.Universal.Shaders.csproj" />

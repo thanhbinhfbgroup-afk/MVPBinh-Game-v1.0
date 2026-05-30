@@ -2,6 +2,7 @@ using BillGameCore.Core.Interaction;
 using BillGameCore.Modules.InteractionGroup.Chest.Domain;
 using BillGameCore.Modules.InteractionGroup.Chest.Infrastructure.Config;
 using BillGameCore.Modules.InteractionGroup.Chest.Application;
+using BillGameCore.SharedPorts.Economy;
 using UnityEngine;
 using System;
 
@@ -11,6 +12,7 @@ namespace BillGameCore.Modules.InteractionGroup.Chest.Presentation
     {
         private ChestPresenter _presenter;
         [SerializeField] private ChestConfig _config;
+        private IRewardGrantService _rewardGrantService;
 
         private void Awake()
         {
@@ -21,7 +23,7 @@ namespace BillGameCore.Modules.InteractionGroup.Chest.Presentation
             }
             var definition = _config.ToDefinition();
             var state = new ChestState(definition);
-            var application = new ChestApplication(state);
+            var application = new ChestApplication(definition, state);
             var view = GetComponent<ChestView>();
 
             if (view == null)
@@ -34,6 +36,11 @@ namespace BillGameCore.Modules.InteractionGroup.Chest.Presentation
             _presenter.Initialize();
         }
 
+        public void SetRewardGrantService(IRewardGrantService rewardGrantService)
+        {
+            _rewardGrantService = rewardGrantService;
+        }
+
         public bool CanInteract()
         {
             return _presenter.CanInteract();
@@ -41,7 +48,18 @@ namespace BillGameCore.Modules.InteractionGroup.Chest.Presentation
 
         public void Interact()
         {
-            _presenter.TryInteract();
+            var result = _presenter.TryInteract();
+            if (!result.IsOpenedNow)
+            {
+                return;
+            }
+            if (!result.Reward.IsEmpty)
+            {
+                _rewardGrantService?.Grant(result.Reward);
+            }
+            Debug.Log(
+                $"Chest opened. Reward: Gold={result.Reward.Gold}, Experience={result.Reward.Experience}.",
+                this);
         }
         
     }

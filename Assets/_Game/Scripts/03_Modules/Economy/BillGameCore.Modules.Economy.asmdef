@@ -1,0 +1,17 @@
+{
+  "name": "BillGameCore.Modules.Economy",
+  "rootNamespace": "BillGameCore.Modules.Economy",
+  "references": [
+    "BillGameCore.Core",
+    "BillGameCore.SharedPorts"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

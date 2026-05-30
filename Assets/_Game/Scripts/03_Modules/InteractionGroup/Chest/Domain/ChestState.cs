@@ -11,15 +11,9 @@ namespace BillGameCore.Modules.InteractionGroup.Chest.Domain
             _isOpened = definition.StartsOpened;
         }
 
-        public bool TryOpen()
+        public void MarkOpened()
         {
-            if (_isOpened)
-            {
-                return false;
-            }
-
             _isOpened = true;
-            return true;
         }
     }
 }

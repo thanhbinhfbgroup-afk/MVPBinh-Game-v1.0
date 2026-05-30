@@ -23,7 +23,7 @@ namespace BillGameCore.Modules.Input.Infrastructure
 
             _controlledEntityId = controlledEntityId;
         }
-
+       
         public void SetCommandBuffer(CommandBuffer commandBuffer)
         {
             _commandBuffer = commandBuffer;

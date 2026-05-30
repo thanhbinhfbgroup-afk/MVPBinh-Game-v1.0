@@ -47,7 +47,7 @@ namespace BillGameCore.Modules.Player.Presentation
                     continue;
                 }
 
-                if (command.Type == CommandType.Interact // Thùng thư báo: "Có thư tương tác nè!"
+                if (command.Type == CommandType.Interact 
                     && command is IInteractCommand interactCommand 
                     && interactCommand.IsPerformed)
                 {
@@ -75,7 +75,7 @@ namespace BillGameCore.Modules.Player.Presentation
         public void Stop()
         {
             _view.SetMoveVelocity(Vector2.zero);
-            //HỦY ĐĂNG KÝ EVENT ĐỂ DỌN DẸP BỘ NHỚ RAM
+            
             _view.TriggerEntered -= HandleTriggerEntered;
             _view.TriggerExited -= HandleTriggerExited;
         }
@@ -86,37 +86,37 @@ namespace BillGameCore.Modules.Player.Presentation
             {
                 return;
             }
-
+           
             _currentInteractable = other.GetComponent<IInteractable>();
         }
 
         private void HandleTriggerExited(Collider2D other)
         {
-            // Nếu không có vật thể, hoặc trong não Presenter vốn dĩ đang trống rỗng -> Thoát sớm cho nhẹ máy.
+            
             if (other == null || _currentInteractable == null) return;
 
-            // Lấy chiếc mặt nạ IInteractable của vật thể vừa đi ra ngoài
+            
             var interactable = other.GetComponent<IInteractable>();
 
-            // SO SÁNH VÙNG NHỚ: Cái vừa đi ra có đúng là cái đang được nhớ trong não không?
+            
             if (ReferenceEquals(interactable, _currentInteractable))
             {
-                _currentInteractable = null; // Đúng rồi thì xóa bộ nhớ về null!
+                _currentInteractable = null; 
             }
         }
 
         private void TryInteract()
-        {   // Việc 1: Check null target
+        {   
             if (_currentInteractable == null)
             {
                 return;
             }
-            // Việc 2: Check điều kiện có được tương tác không
+            
             if (!_currentInteractable.CanInteract())
             {
                 return;
             }
-            // Việc 3: Gọi tương tác thực tế
+            
             _currentInteractable.Interact();
         }
     }
