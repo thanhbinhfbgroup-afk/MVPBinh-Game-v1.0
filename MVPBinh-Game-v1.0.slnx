@@ -1,9 +1,12 @@
 ﻿<Solution>
+  <Project Path="BillGameCore.Modules.Enemy.csproj" />
   <Project Path="BillGameCore.SharedPorts.csproj" />
   <Project Path="BillGameCore.Modules.Player.csproj" />
   <Project Path="BillGameCore.Scenes.csproj" />
   <Project Path="Assembly-CSharp.csproj" />
   <Project Path="BillGameCore.Modules.Input.csproj" />
+  <Project Path="BillGameCore.Modules.InteractionGroup.csproj" />
   <Project Path="Assembly-CSharp-Editor.csproj" />
   <Project Path="BillGameCore.Core.csproj" />
+  <Project Path="BillGameCore.Modules.Economy.csproj" />
 </Solution>

@@ -10,7 +10,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: eb11aa919c7c2e9409bbfdf519a11581, type: 3}
-  m_Name: ChestRewardConfig
+  m_Name: ChestRewardMedium
   m_EditorClassIdentifier: BillGameCore.Modules.InteractionGroup::BillGameCore.Modules.InteractionGroup.Chest.Infrastructure.Config.ChestRewardConfig
-  _gold: 50
-  _experience: 1000
+  _gold: 40
+  _experience: 500
+  _coin: 50

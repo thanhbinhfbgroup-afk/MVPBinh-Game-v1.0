@@ -4,5 +4,6 @@ namespace BillGameCore.SharedPorts.Economy
     {
         int Gold { get; }
         int Experience { get; }
+        int Coin { get; }
     }
 }

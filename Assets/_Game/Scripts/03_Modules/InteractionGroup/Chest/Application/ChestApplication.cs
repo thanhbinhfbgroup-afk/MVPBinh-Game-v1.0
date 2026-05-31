@@ -24,7 +24,7 @@ namespace BillGameCore.Modules.InteractionGroup.Chest.Application
         {
             if (_state.IsOpened)
             {
-                return new ChestOpenResult(false, new RewardBundle(0, 0));
+                return new ChestOpenResult(false, new RewardBundle(0, 0, 0));
             }
 
             _state.MarkOpened();

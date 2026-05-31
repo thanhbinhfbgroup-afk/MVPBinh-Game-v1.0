@@ -11,7 +11,8 @@
         "VContainer",
         "Unity.InputSystem",
         "BillGameCore.Modules.Economy",
-        "BillGameCore.Modules.InteractionGroup"
+        "BillGameCore.Modules.InteractionGroup",
+        "Unity.TextMeshPro"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

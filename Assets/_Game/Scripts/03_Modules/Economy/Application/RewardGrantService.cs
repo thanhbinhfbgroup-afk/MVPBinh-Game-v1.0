@@ -7,11 +7,13 @@ namespace BillGameCore.Modules.Economy.Application
     {
         public int Gold { get; private set; }
         public int Experience { get; private set; }
+        public int Coin { get; private set; }
 
         public void Grant(RewardBundle bundle)
         {
             Gold += bundle.Gold;
             Experience += bundle.Experience;
+            Coin += bundle.Coin;
         }
     }
 }

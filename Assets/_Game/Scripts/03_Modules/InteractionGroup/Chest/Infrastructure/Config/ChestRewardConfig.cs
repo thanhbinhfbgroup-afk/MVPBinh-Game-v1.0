@@ -1,4 +1,5 @@
 using BillGameCore.Core.Rewards;
+using System;
 using UnityEngine;
 
 namespace BillGameCore.Modules.InteractionGroup.Chest.Infrastructure.Config
@@ -11,10 +12,11 @@ namespace BillGameCore.Modules.InteractionGroup.Chest.Infrastructure.Config
         [Header("--- Shared Reward Archetype ---")]
         [SerializeField] private int _gold;
         [SerializeField] private int _experience;
+        [SerializeField] private int _coin;
 
         public RewardBundle ToRewardBundle()
         {
-            return new RewardBundle(_gold, _experience);
+            return new RewardBundle(_gold, _experience, _coin);
         }
     }
 }

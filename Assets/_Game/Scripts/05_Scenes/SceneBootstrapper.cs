@@ -7,6 +7,9 @@ using BillGameCore.Modules.InteractionGroup.Chest.Presentation;
 using BillGameCore.Modules.Player.Presentation;
 using BillGameCore.SharedPorts.Economy;
 using BillGameCore.SharedPorts.Input;
+using BillGameCore.Modules.Enemy.Infrastructure.Config;
+using BillGameCore.Modules.Enemy.Presentation;
+using BillGameCore.Scenes.UI;
 using UnityEngine;
 
 namespace BillGameCore.Scenes
@@ -17,11 +20,18 @@ namespace BillGameCore.Scenes
         [SerializeField] private float _moveSpeed = 5f;
         [SerializeField] private InputReader _inputReader;
         [SerializeField] private SceneController _sceneController;
-        [SerializeField] private ChestBinder _testChest;
+        [SerializeField] private ChestBinder[] _chests;
+        [SerializeField] private WalletHudView _walletHudView;
+        [SerializeField] private EnemyConfig _enemyConfig;
+        [SerializeField] private EnemyView _enemyView;
+
 
 
         private PlayerRuntime _playerRuntime;
         private RewardGrantService _rewardGrantService;
+        private WalletHudPresenter _walletHudPresenter;
+        private EnemySpawner _enemySpawner;
+        private EnemyRuntime _enemyRuntime;
 
         [ContextMenu("Debug/Switch Context To Player")]
         private void DebugSwitchContextToPlayer()
@@ -47,7 +57,7 @@ namespace BillGameCore.Scenes
             }
 
             Debug.Log(
-                $"Wallet => Gold={_rewardGrantService.Gold}, Experience={_rewardGrantService.Experience}.",
+                $"Wallet => Gold={_rewardGrantService.Gold}, XP={_rewardGrantService.Experience}.",
                 this);
         }
         private void Awake()
@@ -62,7 +72,22 @@ namespace BillGameCore.Scenes
             _inputReader.SetControlledEntity(_playerRuntime.Id);
             _playerRuntime.SetOnDiedCallback(_sceneController.HandlePlayerDied);
             _rewardGrantService = new RewardGrantService();
-            _testChest.SetRewardGrantService(_rewardGrantService);
+            _walletHudPresenter = new WalletHudPresenter(_rewardGrantService, _walletHudView);
+            _walletHudPresenter.Refresh();
+            _enemySpawner = new EnemySpawner(_enemyConfig, _enemyView);
+            _enemyRuntime = _enemySpawner.Spawn();
+            _enemyRuntime.Presenter.OnDiedCallback = HandleEnemyDied;
+
+            foreach (var chest in _chests)
+            {
+                if (chest == null)
+                {
+                    continue;
+                }
+
+                chest.SetRewardGrantService(_rewardGrantService);
+                chest.SetOpenedCallback(_walletHudPresenter.Refresh);
+            }
 
         }
 
@@ -74,6 +99,12 @@ namespace BillGameCore.Scenes
         private void OnDestroy()
         {
             _playerRuntime?.Dispose();
+            _enemyRuntime?.Dispose();
+        }
+        private void HandleEnemyDied(BillGameCore.Core.Rewards.RewardBundle reward)
+        {
+            _rewardGrantService.Grant(reward);
+            _walletHudPresenter.Refresh();
         }
     }
 }

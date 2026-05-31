@@ -10,9 +10,11 @@ namespace BillGameCore.Modules.InteractionGroup.Chest.Presentation
 {
     public sealed class ChestBinder : MonoBehaviour, IInteractable
     {
-        private ChestPresenter _presenter;
         [SerializeField] private ChestConfig _config;
+
+        private ChestPresenter _presenter;    
         private IRewardGrantService _rewardGrantService;
+        private Action _openedCallback;
 
         private void Awake()
         {
@@ -41,6 +43,11 @@ namespace BillGameCore.Modules.InteractionGroup.Chest.Presentation
             _rewardGrantService = rewardGrantService;
         }
 
+        public void SetOpenedCallback(Action openedCallback)
+        {
+            _openedCallback = openedCallback;
+        }
+
         public bool CanInteract()
         {
             return _presenter.CanInteract();
@@ -56,9 +63,10 @@ namespace BillGameCore.Modules.InteractionGroup.Chest.Presentation
             if (!result.Reward.IsEmpty)
             {
                 _rewardGrantService?.Grant(result.Reward);
+                _openedCallback?.Invoke();
             }
             Debug.Log(
-                $"Chest opened. Reward: Gold={result.Reward.Gold}, Experience={result.Reward.Experience}.",
+                $"Chest opened. Reward: Gold={result.Reward.Gold}, XP={result.Reward.Experience}.",
                 this);
         }
         
