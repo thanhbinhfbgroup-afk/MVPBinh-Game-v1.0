@@ -1,9 +1,10 @@
+using BillGameCore.Core.Combat;
 using BillGameCore.Core.Rewards;
 using BillGameCore.Modules.Enemy.Domain;
 
 namespace BillGameCore.Modules.Enemy.Application
 {
-    public sealed class EnemyApplication
+    public sealed class EnemyApplication : IDamageReceiver
     {
         private readonly EnemyDefinition _definition;
         private readonly EnemyState _state;
@@ -16,19 +17,24 @@ namespace BillGameCore.Modules.Enemy.Application
 
         public bool IsDead => _state.IsDead;
 
-        public bool CanInteract()
-        {
-            return !_state.IsDead;
-        }
+        public float CurrentHealth => _state.CurrentHealth;
 
-        public EnemyDeathResult TryKill()
+        public RewardBundle DeathReward => _definition.Reward;
+
+        public DamageResult ReceiveDamage(DamageInfo damageInfo)
         {
-            if (!_state.TryMarkDead())
+            var amount = damageInfo.Amount;
+            if (amount < 0f)
             {
-                return new EnemyDeathResult(false, new RewardBundle(0, 0, 0));
+                amount = 0f;
             }
 
-            return new EnemyDeathResult(true, _definition.Reward);
+            _state.ApplyDamage(amount, out var appliedDamage, out var justDied);
+
+            return new DamageResult(
+                appliedDamage,
+                _state.CurrentHealth,
+                justDied);
         }
     }
 }

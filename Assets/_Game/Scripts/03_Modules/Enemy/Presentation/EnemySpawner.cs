@@ -21,7 +21,7 @@ namespace BillGameCore.Modules.Enemy.Presentation
         public EnemyRuntime Spawn()
         {
             var definition = _config.ToDefinition();
-            var state = new EnemyState();
+            var state = new EnemyState(definition.MaxHealth);
             var application = new EnemyApplication(definition, state);
             var presenter = new EnemyPresenter(application, _enemyView);
 

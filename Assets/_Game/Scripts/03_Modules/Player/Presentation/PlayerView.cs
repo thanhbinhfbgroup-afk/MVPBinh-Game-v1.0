@@ -13,6 +13,11 @@ namespace BillGameCore.Modules.Player.Presentation
 
         public void SetMoveVelocity(Vector2 velocity)
         {
+            if (_rigidbody2D == null)
+            {
+                return;
+            }
+
             _rigidbody2D.linearVelocity = velocity;
         }
         private void OnTriggerEnter2D(Collider2D other)

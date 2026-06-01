@@ -9,14 +9,15 @@ namespace BillGameCore.Modules.Enemy.Infrastructure.Config
         menuName = "BillGameCore/Enemy/Enemy Config")]
     public sealed class EnemyConfig : ScriptableObject
     {
+        [SerializeField] private float _maxHealth;
         [SerializeField] private int _gold;
         [SerializeField] private int _experience;
-        [SerializeField] private int _coin;
+        [SerializeField] private int _coin;    
 
         public EnemyDefinition ToDefinition()
         {
             var reward = new RewardBundle(_gold, _experience, _coin);
-            return new EnemyDefinition(reward);
+            return new EnemyDefinition(_maxHealth, reward);
         }
     }
 }

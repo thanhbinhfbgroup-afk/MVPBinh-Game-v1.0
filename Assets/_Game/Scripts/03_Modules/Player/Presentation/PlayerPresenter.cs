@@ -2,6 +2,7 @@
 using BillGameCore.SharedPorts.Input;
 using BillGameCore.Core.ValueObjects;
 using BillGameCore.Core.Interaction;
+using BillGameCore.Core.Combat;
 using UnityEngine;
 using System;
 
@@ -14,6 +15,8 @@ namespace BillGameCore.Modules.Player.Presentation
         private readonly IInputCommandSource _inputCommandSource;
         private readonly BillEntityId _entityId;
         private IInteractable _currentInteractable;
+        private const float ContactDamage = 1f;
+        private Collider2D _currentOverlapCollider;
 
         public PlayerPresenter(PlayerApplication application, PlayerView view, IInputCommandSource inputCommandSource, BillEntityId entityId)
         {
@@ -86,37 +89,48 @@ namespace BillGameCore.Modules.Player.Presentation
             {
                 return;
             }
-           
+
+            _currentOverlapCollider = other;
             _currentInteractable = other.GetComponent<IInteractable>();
         }
 
         private void HandleTriggerExited(Collider2D other)
         {
-            
-            if (other == null || _currentInteractable == null) return;
-
-            
-            var interactable = other.GetComponent<IInteractable>();
-
-            
-            if (ReferenceEquals(interactable, _currentInteractable))
+            if (other == null)
             {
-                _currentInteractable = null; 
+                return;
+            }
+
+            if (ReferenceEquals(other, _currentOverlapCollider))
+            {
+                _currentOverlapCollider = null;
+                _currentInteractable = null;
             }
         }
 
         private void TryInteract()
-        {   
+        {
+            if (_currentOverlapCollider != null)
+            {
+                var damageReceiver = _currentOverlapCollider.GetComponent<IDamageReceiver>();
+                if (damageReceiver != null)
+                {
+                    var damageInfo = new DamageInfo(ContactDamage, _entityId, false);
+                    damageReceiver.ReceiveDamage(damageInfo);
+                    return;
+                }
+            }
+
             if (_currentInteractable == null)
             {
                 return;
             }
-            
+
             if (!_currentInteractable.CanInteract())
             {
                 return;
             }
-            
+
             _currentInteractable.Interact();
         }
     }

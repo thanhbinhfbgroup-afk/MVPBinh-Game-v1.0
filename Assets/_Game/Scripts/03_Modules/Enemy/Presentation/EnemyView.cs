@@ -1,12 +1,10 @@
+using BillGameCore.Core.Combat;
 using UnityEngine;
-using BillGameCore.Core.Interaction;
 
 namespace BillGameCore.Modules.Enemy.Presentation
 {
-    public sealed class EnemyView : MonoBehaviour, IInteractable
+    public sealed class EnemyView : MonoBehaviour, IDamageReceiver
     {
-        [SerializeField] private GameObject _aliveVisual;
-        [SerializeField] private GameObject _deadVisual;
         private EnemyPresenter _presenter;
 
         public void Bind(EnemyPresenter presenter)
@@ -14,25 +12,14 @@ namespace BillGameCore.Modules.Enemy.Presentation
             _presenter = presenter;
         }
 
-        public void SetDead(bool isDead)
+        public DamageResult ReceiveDamage(DamageInfo damageInfo)
         {
-            if (_aliveVisual != null)
-            {
-                _aliveVisual.SetActive(!isDead);
-            }
+            return _presenter.ReceiveDamage(damageInfo);
+        }
 
-            if (_deadVisual != null)
-            {
-                _deadVisual.SetActive(isDead);
-            }
-        }
-        public bool CanInteract()
+        public void Hide()
         {
-            return _presenter != null && _presenter.CanInteract();
-        }
-        public void Interact()
-        {
-            _presenter?.TryInteractKill();
+            gameObject.SetActive(false);
         }
     }
 }

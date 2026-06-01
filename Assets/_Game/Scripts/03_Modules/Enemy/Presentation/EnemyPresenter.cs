@@ -1,4 +1,5 @@
 using System;
+using BillGameCore.Core.Combat;
 using BillGameCore.Core.Rewards;
 using BillGameCore.Modules.Enemy.Application;
 
@@ -8,6 +9,7 @@ namespace BillGameCore.Modules.Enemy.Presentation
     {
         private readonly EnemyApplication _application;
         private readonly EnemyView _view;
+
         public Action<RewardBundle> OnDiedCallback { get; set; }
 
         public EnemyPresenter(EnemyApplication application, EnemyView view)
@@ -18,22 +20,20 @@ namespace BillGameCore.Modules.Enemy.Presentation
 
         public void Initialize()
         {
-            _view.SetDead(_application.IsDead);
+            if (_application.IsDead)
+            {
+                _view.Hide();
+            }
         }
 
-        public bool CanInteract()
+        public DamageResult ReceiveDamage(DamageInfo damageInfo)
         {
-            return _application.CanInteract();
-        }
-
-        public EnemyDeathResult TryInteractKill()
-        {
-            var result = _application.TryKill();
+            var result = _application.ReceiveDamage(damageInfo);
 
             if (result.JustDied)
             {
-                _view.SetDead(true);
-                OnDiedCallback?.Invoke(result.Reward);
+                _view.Hide();
+                OnDiedCallback?.Invoke(_application.DeathReward);
             }
 
             return result;
