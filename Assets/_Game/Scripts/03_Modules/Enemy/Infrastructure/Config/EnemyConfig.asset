@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ba9ceb8cdda45b94680d5375e1b96313, type: 3}
   m_Name: EnemyConfig
   m_EditorClassIdentifier: BillGameCore.Modules.Enemy::BillGameCore.Modules.Enemy.Infrastructure.Config.EnemyConfig
+  _maxHealth: 3
   _gold: 10
   _experience: 50
   _coin: 5
