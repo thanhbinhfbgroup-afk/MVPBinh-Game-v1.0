@@ -1296,6 +1296,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7b2d807e7d540ae46b4583decd7f5971, type: 3}
   m_Name: 
   m_EditorClassIdentifier: BillGameCore.Modules.Enemy::BillGameCore.Modules.Enemy.Presentation.EnemyView
+  _spriteRenderer: {fileID: 1707945468}
+  _hitColor: {r: 1, g: 0, b: 0, a: 1}
+  _hitFlashDuration: 0.1
 --- !u!4 &1707945466
 Transform:
   m_ObjectHideFlags: 0

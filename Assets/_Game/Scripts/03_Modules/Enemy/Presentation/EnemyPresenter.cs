@@ -30,6 +30,11 @@ namespace BillGameCore.Modules.Enemy.Presentation
         {
             var result = _application.ReceiveDamage(damageInfo);
 
+            if (result.AppliedDamage > 0f && !result.JustDied)
+            {
+                _view.ShowHitColor();
+            }
+
             if (result.JustDied)
             {
                 _view.Hide();

@@ -112,11 +112,19 @@ namespace BillGameCore.Modules.Player.Presentation
         {
             if (_currentOverlapCollider != null)
             {
-                var damageReceiver = _currentOverlapCollider.GetComponent<IDamageReceiver>();
+                var targetCollider = _currentOverlapCollider;
+                var targetName = targetCollider.name;
+                var damageReceiver = targetCollider.GetComponent<IDamageReceiver>();
+
                 if (damageReceiver != null)
                 {
                     var damageInfo = new DamageInfo(ContactDamage, _entityId, false);
-                    damageReceiver.ReceiveDamage(damageInfo);
+                    var damageResult = damageReceiver.ReceiveDamage(damageInfo);
+
+                    Debug.Log(
+                        $"Hit target '{targetName}' | Source={_entityId} | Damage={damageInfo.Amount} | Applied={damageResult.AppliedDamage} | RemainingHP={damageResult.RemainingHealth} | JustDied={damageResult.JustDied}",
+                        _view);
+
                     return;
                 }
             }
