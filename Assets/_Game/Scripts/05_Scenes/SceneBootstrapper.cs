@@ -74,9 +74,10 @@ namespace BillGameCore.Scenes
             _rewardGrantService = new RewardGrantService();
             _walletHudPresenter = new WalletHudPresenter(_rewardGrantService, _walletHudView);
             _walletHudPresenter.Refresh();
+            _sceneController.SetEnemyDeathRewardFlow(_rewardGrantService, _walletHudPresenter);
             _enemySpawner = new EnemySpawner(_enemyConfig, _enemyView);
             _enemyRuntime = _enemySpawner.Spawn();
-            _enemyRuntime.Presenter.OnDiedCallback = HandleEnemyDied;
+            _enemyRuntime.Presenter.OnDiedCallback = _sceneController.HandleEnemyDied;
 
             foreach (var chest in _chests)
             {
@@ -101,10 +102,6 @@ namespace BillGameCore.Scenes
             _playerRuntime?.Dispose();
             _enemyRuntime?.Dispose();
         }
-        private void HandleEnemyDied(BillGameCore.Core.Rewards.RewardBundle reward)
-        {
-            _rewardGrantService.Grant(reward);
-            _walletHudPresenter.Refresh();
-        }
+        
     }
 }

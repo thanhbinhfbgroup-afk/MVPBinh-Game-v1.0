@@ -52,6 +52,11 @@ namespace BillGameCore.Modules.Input.Infrastructure
 
             _commandBuffer.Enqueue(new MoveCommand(_controlledEntityId, dirX, dirY));
 
+            if (_inputActionGateway.WasAttackPerformedThisFrame())
+            {
+                _commandBuffer.Enqueue(new AttackCommand(_controlledEntityId, isPerformed: true));
+            }
+
             if (_inputActionGateway.WasInteractPerformedThisFrame())
             {
                 _commandBuffer.Enqueue(new InteractCommand(_controlledEntityId, isPerformed: true));

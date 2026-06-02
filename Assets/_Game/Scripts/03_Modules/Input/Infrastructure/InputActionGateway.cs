@@ -12,6 +12,7 @@ namespace BillGameCore.Modules.Input.Infrastructure
         private readonly InputActionMap _playerActionMap;
         private readonly InputAction _moveAction;
         private readonly InputAction _interactAction;
+        private readonly InputAction _attackAction;
         public InputContext CurrentContext { get; private set; }
 
         public InputActionGateway(InputActionAsset actions)
@@ -25,6 +26,7 @@ namespace BillGameCore.Modules.Input.Infrastructure
             _playerActionMap = _runtimeActions.FindActionMap(InputContextNames.Player, throwIfNotFound: true);
             _moveAction = _playerActionMap.FindAction("Move", throwIfNotFound: true);
             _interactAction = _playerActionMap.FindAction("Interact", throwIfNotFound: true);
+            _attackAction = _playerActionMap.FindAction("Attack", throwIfNotFound: true);
         }
 
         // Hàm chuyển đổi ngữ cảnh (Nhận vào struct InputContext an toàn)
@@ -95,6 +97,16 @@ namespace BillGameCore.Modules.Input.Infrastructure
             }
 
             return _interactAction.WasPerformedThisFrame();
+        }
+        public bool WasAttackPerformedThisFrame()
+        {
+            if (CurrentContext != InputContext.Player)
+            {
+                throw new InvalidOperationException(
+                    $"Cannot read attack input when current context is '{CurrentContext}'.");
+            }
+
+            return _attackAction.WasPerformedThisFrame();
         }
         public void Dispose()
         {

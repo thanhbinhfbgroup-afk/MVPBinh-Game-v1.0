@@ -1,5 +1,6 @@
 using BillGameCore.Core.ValueObjects;
 using BillGameCore.Modules.Player.Application;
+using BillGameCore.Modules.Player.Domain;
 using BillGameCore.SharedPorts.Input;
 using UnityEngine;
 
@@ -22,7 +23,8 @@ namespace BillGameCore.Modules.Player.Presentation
         {
             
             var view = Object.Instantiate(_prefab, position, Quaternion.identity);
-            var application = new PlayerApplication(_moveSpeed);
+            var state = new PlayerState(maxHealth: 5f);
+            var application = new PlayerApplication(_moveSpeed, state);
 
             var id = BillEntityId.New();
             var presenter = new PlayerPresenter(application, view, _inputCommandSource, id);

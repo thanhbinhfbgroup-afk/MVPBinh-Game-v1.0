@@ -15,8 +15,8 @@ namespace BillGameCore.Modules.Player.Presentation
         private readonly IInputCommandSource _inputCommandSource;
         private readonly BillEntityId _entityId;
         private IInteractable _currentInteractable;
-        private const float ContactDamage = 1f;
         private Collider2D _currentOverlapCollider;
+        private const float ContactDamage = 1f;
 
         public PlayerPresenter(PlayerApplication application, PlayerView view, IInputCommandSource inputCommandSource, BillEntityId entityId)
         {
@@ -32,6 +32,7 @@ namespace BillGameCore.Modules.Player.Presentation
         {
             IMoveCommand latestMoveCommand = null;
             var interactRequested = false;
+            var attackRequested = false;
 
             while (_inputCommandSource.TryDequeue(out var command))
             {
@@ -49,12 +50,21 @@ namespace BillGameCore.Modules.Player.Presentation
 
                     continue;
                 }
+                
+                if (command.Type == CommandType.Attack
+                    && command is IAttackCommand attackCommand
+                    && attackCommand.IsPerformed)
+                {
+                    attackRequested = true;
+                    continue;
+                }
 
                 if (command.Type == CommandType.Interact 
                     && command is IInteractCommand interactCommand 
                     && interactCommand.IsPerformed)
                 {
                     interactRequested = true;
+                    
                 }
             }
 
@@ -68,7 +78,10 @@ namespace BillGameCore.Modules.Player.Presentation
 
                 _view.SetMoveVelocity(new Vector2(velocityX, velocityY));
             }
-
+            if (attackRequested)
+            {
+                TryAttack();
+            }
             if (interactRequested)
             {
                 TryInteract();
@@ -107,28 +120,42 @@ namespace BillGameCore.Modules.Player.Presentation
                 _currentInteractable = null;
             }
         }
-
-        private void TryInteract()
+        public DamageResult ReceiveDamage(DamageInfo damageInfo)
         {
-            if (_currentOverlapCollider != null)
+            var result = _application.ReceiveDamage(damageInfo);
+
+            if (result.JustDied)
             {
-                var targetCollider = _currentOverlapCollider;
-                var targetName = targetCollider.name;
-                var damageReceiver = targetCollider.GetComponent<IDamageReceiver>();
-
-                if (damageReceiver != null)
-                {
-                    var damageInfo = new DamageInfo(ContactDamage, _entityId, false);
-                    var damageResult = damageReceiver.ReceiveDamage(damageInfo);
-
-                    Debug.Log(
-                        $"Hit target '{targetName}' | Source={_entityId} | Damage={damageInfo.Amount} | Applied={damageResult.AppliedDamage} | RemainingHP={damageResult.RemainingHealth} | JustDied={damageResult.JustDied}",
-                        _view);
-
-                    return;
-                }
+                OnDiedCallback?.Invoke();
             }
 
+            return result;
+        }
+        private void TryAttack()
+        {
+            if (_currentOverlapCollider == null)
+            {
+                return;
+            }
+
+            var targetCollider = _currentOverlapCollider;
+            var targetName = targetCollider.name;
+
+            var damageReceiver = targetCollider.GetComponent<IDamageReceiver>();
+            if (damageReceiver == null)
+            {
+                return;
+            }
+
+            var damageInfo = new DamageInfo(ContactDamage, _entityId, false);
+            var damageResult = damageReceiver.ReceiveDamage(damageInfo);
+
+            Debug.Log(
+                $"Hit target '{targetName}' | Source={_entityId} | Damage={damageInfo.Amount} | Applied={damageResult.AppliedDamage} | RemainingHP={damageResult.RemainingHealth} | JustDied={damageResult.JustDied}",
+                _view);
+        }
+        private void TryInteract()
+        {
             if (_currentInteractable == null)
             {
                 return;
