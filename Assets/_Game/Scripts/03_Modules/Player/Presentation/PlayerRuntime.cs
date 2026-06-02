@@ -1,4 +1,5 @@
 using System;
+using BillGameCore.Core.Combat;
 using BillGameCore.Core.ValueObjects;
 
 namespace BillGameCore.Modules.Player.Presentation
@@ -24,6 +25,11 @@ namespace BillGameCore.Modules.Player.Presentation
             }
 
             _presenter.Tick();
+        }
+
+        public DamageResult ReceiveDamage(DamageInfo damageInfo)
+        {
+            return _presenter.ReceiveDamage(damageInfo);
         }
 
         public void SetOnDiedCallback(Action onDiedCallback)

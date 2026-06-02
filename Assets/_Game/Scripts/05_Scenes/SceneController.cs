@@ -18,7 +18,7 @@ namespace BillGameCore.Scenes
         }
         public void HandlePlayerDied()
         {
-
+            Debug.Log("Player died.", this);
         }
 
         public void HandleEnemyDied(RewardBundle reward)
