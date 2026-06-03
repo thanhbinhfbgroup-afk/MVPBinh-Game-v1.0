@@ -36,7 +36,15 @@ namespace BillGameCore.Modules.Player.Presentation
         {
             _presenter.OnDiedCallback = onDiedCallback;
         }
+        public DamageResult ReceiveDamage(DamageInfo damageInfo)
+        {
+            if (_isDisposed)
+            {
+                return new DamageResult(0f, 0f, false);
+            }
 
+            return _presenter.ReceiveDamage(damageInfo);
+        }
         public void Dispose()
         {
             if (_isDisposed)

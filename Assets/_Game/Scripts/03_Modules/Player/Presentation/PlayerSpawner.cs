@@ -28,8 +28,9 @@ namespace BillGameCore.Modules.Player.Presentation
 
             var id = BillEntityId.New();
             var presenter = new PlayerPresenter(application, view, _inputCommandSource, id);
+            view.Bind(presenter);
 
-            var runtime = new PlayerRuntime(presenter,id);
+            var runtime = new PlayerRuntime(presenter, id);
 
             return runtime;
         }
