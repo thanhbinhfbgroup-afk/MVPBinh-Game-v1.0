@@ -30,7 +30,7 @@ namespace BillGameCore.Modules.Player.Presentation
             var presenter = new PlayerPresenter(application, view, _inputCommandSource, id);
             view.Bind(presenter);
 
-            var runtime = new PlayerRuntime(presenter, id);
+            var runtime = new PlayerRuntime(presenter, view, id);
 
             return runtime;
         }

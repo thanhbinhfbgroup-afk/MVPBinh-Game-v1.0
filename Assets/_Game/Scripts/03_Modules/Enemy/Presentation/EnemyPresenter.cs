@@ -36,7 +36,7 @@ namespace BillGameCore.Modules.Enemy.Presentation
             }
 
             if (result.JustDied)
-            {
+            {           
                 _view.Hide();
                 OnDiedCallback?.Invoke(_application.DeathReward);
             }

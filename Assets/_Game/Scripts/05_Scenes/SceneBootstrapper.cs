@@ -62,22 +62,7 @@ namespace BillGameCore.Scenes
                 $"Wallet => Gold={_rewardGrantService.Gold}, XP={_rewardGrantService.Experience}.",
                 this);
         }
-        [ContextMenu("Debug/Damage Player 1 HP")]
-        private void DebugDamagePlayer()
-        {
-            if (_playerRuntime == null)
-            {
-                Debug.LogWarning("PlayerRuntime has not been created yet.", this);
-                return;
-            }
-
-            var damageInfo = new DamageInfo(1f, BillEntityId.Invalid, false);
-            var damageResult = _playerRuntime.ReceiveDamage(damageInfo);
-
-            Debug.Log(
-                $"Debug damage player | Applied={damageResult.AppliedDamage} | RemainingHP={damageResult.RemainingHealth} | JustDied={damageResult.JustDied}",
-                this);
-        }
+       
         private void Awake()
         {
             var commandBuffer = new CommandBuffer();

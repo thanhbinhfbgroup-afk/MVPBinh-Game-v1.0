@@ -23,12 +23,14 @@ namespace BillGameCore.Modules.Enemy.Presentation
             var definition = _config.ToDefinition();
             var state = new EnemyState(definition.MaxHealth);
             var application = new EnemyApplication(definition, state);
+
+            var id = BillEntityId.New();
             var presenter = new EnemyPresenter(application, _enemyView);
 
             _enemyView.Bind(presenter);
+            _enemyView.SetContactDamage(id, 1f);
             presenter.Initialize();
 
-            var id = BillEntityId.New();
             return new EnemyRuntime(id, presenter);
         }
     }

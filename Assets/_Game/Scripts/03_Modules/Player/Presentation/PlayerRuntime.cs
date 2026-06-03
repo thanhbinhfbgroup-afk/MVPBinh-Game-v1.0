@@ -10,10 +10,12 @@ namespace BillGameCore.Modules.Player.Presentation
         private bool _isDisposed;
 
         public BillEntityId Id { get; }
+        public PlayerView View { get; }
 
-        public PlayerRuntime(PlayerPresenter presenter, BillEntityId id)
+        public PlayerRuntime(PlayerPresenter presenter, PlayerView view, BillEntityId id)
         {
             _presenter = presenter;
+            View = view;
             Id = id;
         }
 
@@ -35,16 +37,7 @@ namespace BillGameCore.Modules.Player.Presentation
         public void SetOnDiedCallback(Action onDiedCallback)
         {
             _presenter.OnDiedCallback = onDiedCallback;
-        }
-        public DamageResult ReceiveDamage(DamageInfo damageInfo)
-        {
-            if (_isDisposed)
-            {
-                return new DamageResult(0f, 0f, false);
-            }
-
-            return _presenter.ReceiveDamage(damageInfo);
-        }
+        }   
         public void Dispose()
         {
             if (_isDisposed)

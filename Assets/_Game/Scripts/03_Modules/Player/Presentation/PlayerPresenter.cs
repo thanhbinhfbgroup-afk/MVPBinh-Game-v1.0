@@ -30,6 +30,11 @@ namespace BillGameCore.Modules.Player.Presentation
 
         public void Tick()
         {
+            if (_application.IsDead)
+            {
+                _view.SetMoveVelocity(Vector2.zero);
+                return;
+            }
             IMoveCommand latestMoveCommand = null;
             var interactRequested = false;
             var attackRequested = false;
@@ -123,6 +128,12 @@ namespace BillGameCore.Modules.Player.Presentation
         public DamageResult ReceiveDamage(DamageInfo damageInfo)
         {
             var result = _application.ReceiveDamage(damageInfo);
+            if (result.AppliedDamage > 0f)
+            {
+                Debug.Log(
+                    $"Player took damage | Source={damageInfo.SourceId} | Damage={damageInfo.Amount} | Applied={result.AppliedDamage} | RemainingHP={result.RemainingHealth} | JustDied={result.JustDied}",
+                    _view);
+            }
 
             if (result.JustDied)
             {
@@ -153,6 +164,10 @@ namespace BillGameCore.Modules.Player.Presentation
             Debug.Log(
                 $"Hit target '{targetName}' | Source={_entityId} | Damage={damageInfo.Amount} | Applied={damageResult.AppliedDamage} | RemainingHP={damageResult.RemainingHealth} | JustDied={damageResult.JustDied}",
                 _view);
+            if (damageResult.JustDied)
+            {
+                Debug.Log("Enemy died.", _view);
+            }
         }
         private void TryInteract()
         {
