@@ -10,7 +10,7 @@ namespace BillGameCore.Modules.Enemy.Presentation
         [SerializeField] private SpriteRenderer _spriteRenderer;
         [SerializeField] private Color _hitColor = Color.red;
         [SerializeField] private float _hitFlashDuration = 0.1f;
-        [SerializeField] private float _contactDamageInterval = 1f;
+        [SerializeField] private float _contactDamageInterval = 5f;
 
         private EnemyPresenter _presenter;
         private Color _defaultColor;

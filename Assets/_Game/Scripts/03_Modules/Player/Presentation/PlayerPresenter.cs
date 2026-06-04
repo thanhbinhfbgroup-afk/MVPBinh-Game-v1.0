@@ -1,7 +1,6 @@
 ﻿using BillGameCore.Modules.Player.Application;
 using BillGameCore.SharedPorts.Input;
 using BillGameCore.Core.ValueObjects;
-using BillGameCore.Core.Interaction;
 using BillGameCore.Core.Combat;
 using UnityEngine;
 using System;
@@ -14,8 +13,7 @@ namespace BillGameCore.Modules.Player.Presentation
         private readonly PlayerView _view;     
         private readonly IInputCommandSource _inputCommandSource;
         private readonly BillEntityId _entityId;
-        private IInteractable _currentInteractable;
-        private Collider2D _currentOverlapCollider;
+        private Vector2 _lastNonZeroMoveDirection;
         private const float ContactDamage = 1f;
 
         public PlayerPresenter(PlayerApplication application, PlayerView view, IInputCommandSource inputCommandSource, BillEntityId entityId)
@@ -24,8 +22,6 @@ namespace BillGameCore.Modules.Player.Presentation
             _view = view;
             _entityId = entityId;
             _inputCommandSource = inputCommandSource;
-            _view.TriggerEntered += HandleTriggerEntered;
-            _view.TriggerExited += HandleTriggerExited;
         }
 
         public void Tick()
@@ -75,6 +71,16 @@ namespace BillGameCore.Modules.Player.Presentation
 
             if (latestMoveCommand != null)
             {
+                if (latestMoveCommand.IsMoving)
+                {
+                    _lastNonZeroMoveDirection = new Vector2(
+                        latestMoveCommand.DirX,
+                        latestMoveCommand.DirY).normalized;
+                }
+                if (_lastNonZeroMoveDirection != Vector2.zero)
+                {
+                    _view.SetSensorFacingDirection(_lastNonZeroMoveDirection);
+                }
                 _application.ComputeMoveVelocity(
                     latestMoveCommand.DirX,
                     latestMoveCommand.DirY,
@@ -97,34 +103,8 @@ namespace BillGameCore.Modules.Player.Presentation
         {
             _view.SetMoveVelocity(Vector2.zero);
             
-            _view.TriggerEntered -= HandleTriggerEntered;
-            _view.TriggerExited -= HandleTriggerExited;
         }
-
-        private void HandleTriggerEntered(Collider2D other)
-        {
-            if (other == null)
-            {
-                return;
-            }
-
-            _currentOverlapCollider = other;
-            _currentInteractable = other.GetComponent<IInteractable>();
-        }
-
-        private void HandleTriggerExited(Collider2D other)
-        {
-            if (other == null)
-            {
-                return;
-            }
-
-            if (ReferenceEquals(other, _currentOverlapCollider))
-            {
-                _currentOverlapCollider = null;
-                _currentInteractable = null;
-            }
-        }
+       
         public DamageResult ReceiveDamage(DamageInfo damageInfo)
         {
             var result = _application.ReceiveDamage(damageInfo);
@@ -144,19 +124,12 @@ namespace BillGameCore.Modules.Player.Presentation
         }
         private void TryAttack()
         {
-            if (_currentOverlapCollider == null)
+            if (!_view.TryGetNearestAttackTarget(out var targetCollider, out var damageReceiver))
             {
                 return;
             }
 
-            var targetCollider = _currentOverlapCollider;
             var targetName = targetCollider.name;
-
-            var damageReceiver = targetCollider.GetComponent<IDamageReceiver>();
-            if (damageReceiver == null)
-            {
-                return;
-            }
 
             var damageInfo = new DamageInfo(ContactDamage, _entityId, false);
             var damageResult = damageReceiver.ReceiveDamage(damageInfo);
@@ -164,6 +137,7 @@ namespace BillGameCore.Modules.Player.Presentation
             Debug.Log(
                 $"Hit target '{targetName}' | Source={_entityId} | Damage={damageInfo.Amount} | Applied={damageResult.AppliedDamage} | RemainingHP={damageResult.RemainingHealth} | JustDied={damageResult.JustDied}",
                 _view);
+
             if (damageResult.JustDied)
             {
                 Debug.Log("Enemy died.", _view);
@@ -171,17 +145,17 @@ namespace BillGameCore.Modules.Player.Presentation
         }
         private void TryInteract()
         {
-            if (_currentInteractable == null)
+            if (!_view.TryGetNearestInteractTarget(out var targetCollider, out var interactable))
             {
                 return;
             }
 
-            if (!_currentInteractable.CanInteract())
+            if (!interactable.CanInteract())
             {
                 return;
             }
 
-            _currentInteractable.Interact();
+            interactable.Interact();
         }
     }
 }

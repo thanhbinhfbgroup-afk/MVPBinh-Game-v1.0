@@ -10,25 +10,27 @@ namespace BillGameCore.Modules.Enemy.Presentation
     public sealed class EnemySpawner
     {
         private readonly EnemyConfig _config;
-        private readonly EnemyView _enemyView;
 
-        public EnemySpawner(EnemyConfig config, EnemyView enemyView)
+        public EnemySpawner(EnemyConfig config)
         {
             _config = config ?? throw new ArgumentNullException(nameof(config));
-            _enemyView = enemyView ?? throw new ArgumentNullException(nameof(enemyView));
         }
 
-        public EnemyRuntime Spawn()
+        public EnemyRuntime Spawn(EnemyView enemyView)
         {
+            if (enemyView == null)
+            {
+                throw new ArgumentNullException(nameof(enemyView));
+            }
             var definition = _config.ToDefinition();
             var state = new EnemyState(definition.MaxHealth);
             var application = new EnemyApplication(definition, state);
 
             var id = BillEntityId.New();
-            var presenter = new EnemyPresenter(application, _enemyView);
+            var presenter = new EnemyPresenter(application, enemyView);
 
-            _enemyView.Bind(presenter);
-            _enemyView.SetContactDamage(id, 1f);
+            enemyView.Bind(presenter);
+            enemyView.SetContactDamage(id, 1f);
             presenter.Initialize();
 
             return new EnemyRuntime(id, presenter);
