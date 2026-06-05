@@ -250,6 +250,9 @@ MonoBehaviour:
   _rigidbody2D: {fileID: 2916629}
   _hitColor: {r: 1, g: 0, b: 0, a: 1}
   _hitFlashDuration: 0.1
+  _targetLayers:
+    serializedVersion: 2
+    m_Bits: 256
 --- !u!4 &2916628
 Transform:
   m_ObjectHideFlags: 0
@@ -1291,6 +1294,9 @@ MonoBehaviour:
   _rigidbody2D: {fileID: 1707945469}
   _hitColor: {r: 1, g: 0, b: 0, a: 1}
   _hitFlashDuration: 0.1
+  _targetLayers:
+    serializedVersion: 2
+    m_Bits: 256
 --- !u!4 &1707945466
 Transform:
   m_ObjectHideFlags: 0
