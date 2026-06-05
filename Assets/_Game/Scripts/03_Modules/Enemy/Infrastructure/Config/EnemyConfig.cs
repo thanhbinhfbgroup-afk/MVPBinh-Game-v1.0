@@ -10,6 +10,10 @@ namespace BillGameCore.Modules.Enemy.Infrastructure.Config
     public sealed class EnemyConfig : ScriptableObject
     {
         [SerializeField] private float _maxHealth;
+        [SerializeField] private float _moveSpeed;
+        [SerializeField] private float _stopDistance;
+        [SerializeField] private float _contactDamage;
+        [SerializeField] private float _contactDamageInterval;
         [SerializeField] private int _gold;
         [SerializeField] private int _experience;
         [SerializeField] private int _coin;    
@@ -17,7 +21,7 @@ namespace BillGameCore.Modules.Enemy.Infrastructure.Config
         public EnemyDefinition ToDefinition()
         {
             var reward = new RewardBundle(_gold, _experience, _coin);
-            return new EnemyDefinition(_maxHealth, reward);
+            return new EnemyDefinition(_maxHealth, _moveSpeed, _stopDistance, _contactDamage, _contactDamageInterval, reward);
         }
     }
 }

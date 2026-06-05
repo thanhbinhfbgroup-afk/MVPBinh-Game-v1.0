@@ -16,6 +16,7 @@ namespace BillGameCore.Scenes
             _rewardGrantService = rewardGrantService;
             _walletHudPresenter = walletHudPresenter;
         }
+
         public void HandlePlayerDied()
         {
             Debug.Log("Player died.", this);

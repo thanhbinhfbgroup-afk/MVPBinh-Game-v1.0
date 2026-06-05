@@ -8,6 +8,7 @@ namespace BillGameCore.Modules.Player.Presentation
     [RequireComponent(typeof(Collider2D))]
     public sealed class InteractSensor : MonoBehaviour
     {
+        [SerializeField] private LayerMask _targetLayers = Physics2D.AllLayers;
         private readonly List<Collider2D> _overlaps = new();
 
         private void Awake()
@@ -70,7 +71,10 @@ namespace BillGameCore.Modules.Player.Presentation
             {
                 return;
             }
-
+            if (!IsInTargetLayers(other.gameObject.layer))
+            {
+                return;
+            }
             if (_overlaps.Contains(other))
             {
                 return;
@@ -87,6 +91,10 @@ namespace BillGameCore.Modules.Player.Presentation
             }
 
             _overlaps.Remove(other);
+        }
+        private bool IsInTargetLayers(int layer)
+        {
+            return (_targetLayers.value & (1 << layer)) != 0;
         }
         private void OnDrawGizmos()
         {

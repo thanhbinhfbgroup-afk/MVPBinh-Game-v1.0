@@ -1,4 +1,5 @@
 using System;
+using UnityEngine;
 using BillGameCore.Core.Combat;
 using BillGameCore.Core.Rewards;
 using BillGameCore.Modules.Enemy.Application;
@@ -25,7 +26,20 @@ namespace BillGameCore.Modules.Enemy.Presentation
                 _view.Hide();
             }
         }
+        public void Tick(Vector2 targetWorldPosition)
+        {
+            if (_application.IsDead)
+            {
+                _view.SetMoveVelocity(Vector2.zero);
+                return;
+            }
 
+            var currentPosition = _view.WorldPosition;
+
+            _application.ComputeMoveVelocityToTarget(currentPosition.x, currentPosition.y, targetWorldPosition.x, targetWorldPosition.y, out var velocityX, out var velocityY);
+
+            _view.SetMoveVelocity(new Vector2(velocityX, velocityY));
+        }
         public DamageResult ReceiveDamage(DamageInfo damageInfo)
         {
             var result = _application.ReceiveDamage(damageInfo);

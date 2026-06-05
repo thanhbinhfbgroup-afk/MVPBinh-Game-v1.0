@@ -9,6 +9,7 @@ using BillGameCore.SharedPorts.Economy;
 using BillGameCore.SharedPorts.Input;
 using BillGameCore.Modules.Enemy.Infrastructure.Config;
 using BillGameCore.Modules.Enemy.Presentation;
+using BillGameCore.Modules.Player.Infrastructure.Config;
 using BillGameCore.Scenes.UI;
 using BillGameCore.Core.Combat;
 using BillGameCore.Core.ValueObjects;
@@ -20,7 +21,7 @@ namespace BillGameCore.Scenes
     public sealed class SceneBootstrapper : MonoBehaviour
     {
         [SerializeField] private PlayerView _playerPrefab;
-        [SerializeField] private float _moveSpeed = 5f;
+        [SerializeField] private PlayerConfig _playerConfig;
         [SerializeField] private InputReader _inputReader;
         [SerializeField] private SceneController _sceneController;
         [SerializeField] private ChestBinder[] _chests;
@@ -71,7 +72,7 @@ namespace BillGameCore.Scenes
 
             var inputCommandSource = new InputCommandDispatcher(commandBuffer);
 
-            var spawner = new PlayerSpawner(_playerPrefab, _moveSpeed, inputCommandSource);
+            var spawner = new PlayerSpawner(_playerPrefab, _playerConfig, inputCommandSource);
             _playerRuntime = spawner.Spawn(Vector2.zero);
             _inputReader.SetControlledEntity(_playerRuntime.Id);
             _playerRuntime.SetOnDiedCallback(_sceneController.HandlePlayerDied);
@@ -112,6 +113,13 @@ namespace BillGameCore.Scenes
         private void Update()
         {
             _playerRuntime.Tick();
+
+            var playerWorldPosition = _playerRuntime.View.WorldPosition;
+
+            for (var i = 0; i < _enemyRuntimes.Count; i++)
+            {
+                _enemyRuntimes[i].Tick(playerWorldPosition);
+            }
         }
 
         private void OnDestroy()

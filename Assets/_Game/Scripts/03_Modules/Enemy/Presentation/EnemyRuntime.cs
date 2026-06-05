@@ -1,4 +1,5 @@
 using System;
+using UnityEngine;
 using BillGameCore.Core.ValueObjects;
 
 namespace BillGameCore.Modules.Enemy.Presentation
@@ -18,6 +19,10 @@ namespace BillGameCore.Modules.Enemy.Presentation
         public void Dispose()
         {
             Presenter.OnDiedCallback = null;
+        }
+        public void Tick(Vector2 targetWorldPosition)
+        {
+            Presenter.Tick(targetWorldPosition);
         }
     }
 }

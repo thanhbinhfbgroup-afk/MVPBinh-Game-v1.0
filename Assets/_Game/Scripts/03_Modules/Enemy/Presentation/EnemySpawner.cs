@@ -30,7 +30,7 @@ namespace BillGameCore.Modules.Enemy.Presentation
             var presenter = new EnemyPresenter(application, enemyView);
 
             enemyView.Bind(presenter);
-            enemyView.SetContactDamage(id, 1f);
+            enemyView.SetContactDamage(id, definition.ContactDamage, definition.ContactDamageInterval);
             presenter.Initialize();
 
             return new EnemyRuntime(id, presenter);

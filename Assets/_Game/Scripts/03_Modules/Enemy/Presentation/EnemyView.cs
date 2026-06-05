@@ -8,10 +8,12 @@ namespace BillGameCore.Modules.Enemy.Presentation
     public sealed class EnemyView : MonoBehaviour, IDamageReceiver
     {
         [SerializeField] private SpriteRenderer _spriteRenderer;
+        [SerializeField] private Rigidbody2D _rigidbody2D;
         [SerializeField] private Color _hitColor = Color.red;
         [SerializeField] private float _hitFlashDuration = 0.1f;
-        [SerializeField] private float _contactDamageInterval = 5f;
+        [SerializeField] private LayerMask _targetLayers = Physics2D.AllLayers;
 
+        private float _contactDamageInterval;
         private EnemyPresenter _presenter;
         private Color _defaultColor;
         private Coroutine _hitFlashRoutine;
@@ -21,12 +23,15 @@ namespace BillGameCore.Modules.Enemy.Presentation
         private BillEntityId _contactDamageSourceId;
         private float _contactDamageAmount;
         public bool CanDamageCurrentTarget => _contactDamageCooldown <= 0f;
+        public Vector2 WorldPosition => _rigidbody2D.position;
 
-        public void SetContactDamage(BillEntityId sourceId, float damageAmount)
+        public void SetContactDamage(BillEntityId sourceId, float damageAmount, float damageInterval)
         {
             _contactDamageSourceId = sourceId;
             _contactDamageAmount = damageAmount;
+            _contactDamageInterval = damageInterval;
         }
+
         public BillEntityId ContactDamageSourceId => _contactDamageSourceId;
         public float ContactDamageAmount => _contactDamageAmount;
         public IDamageReceiver CurrentTargetDamageReceiver => _currentTargetDamageReceiver;
@@ -69,7 +74,11 @@ namespace BillGameCore.Modules.Enemy.Presentation
                 throw new MissingComponentException(
                     $"{nameof(EnemyView)} on '{gameObject.name}' requires a {nameof(SpriteRenderer)} reference.");
             }
-
+            if (_rigidbody2D == null)
+            {
+                throw new MissingComponentException(
+                    $"{nameof(EnemyView)} on '{gameObject.name}' requires a {nameof(Rigidbody2D)} reference.");
+            }
             _defaultColor = _spriteRenderer.color;
         }
 
@@ -82,7 +91,10 @@ namespace BillGameCore.Modules.Enemy.Presentation
         {
             return _presenter.ReceiveDamage(damageInfo);
         }
-
+        public void SetMoveVelocity(Vector2 velocity)
+        {
+            _rigidbody2D.linearVelocity = velocity;
+        }
         public void ShowHitColor()
         {
             if (_hitFlashRoutine != null)
@@ -123,7 +135,10 @@ namespace BillGameCore.Modules.Enemy.Presentation
             {
                 return;
             }
-
+            if (!IsInTargetLayers(other.gameObject.layer))
+            {
+                return;
+            }
             var damageReceiver = other.GetComponent<IDamageReceiver>();
             if (damageReceiver == null)
             {
@@ -146,6 +161,10 @@ namespace BillGameCore.Modules.Enemy.Presentation
                 _currentTargetCollider = null;
                 _currentTargetDamageReceiver = null;
             }
+        }
+        private bool IsInTargetLayers(int layer)
+        {
+            return (_targetLayers.value & (1 << layer)) != 0;
         }
         public bool TryDamageCurrentTarget(DamageInfo damageInfo, out DamageResult damageResult)
         {

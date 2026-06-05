@@ -14,14 +14,15 @@ namespace BillGameCore.Modules.Player.Presentation
         private readonly IInputCommandSource _inputCommandSource;
         private readonly BillEntityId _entityId;
         private Vector2 _lastNonZeroMoveDirection;
-        private const float ContactDamage = 1f;
+        private readonly float _attackDamage;
 
-        public PlayerPresenter(PlayerApplication application, PlayerView view, IInputCommandSource inputCommandSource, BillEntityId entityId)
+        public PlayerPresenter(PlayerApplication application, PlayerView view, IInputCommandSource inputCommandSource, BillEntityId entityId, float attackDamage)
         {
             _application = application;
             _view = view;
             _entityId = entityId;
             _inputCommandSource = inputCommandSource;
+            _attackDamage = attackDamage;
         }
 
         public void Tick()
@@ -131,7 +132,7 @@ namespace BillGameCore.Modules.Player.Presentation
 
             var targetName = targetCollider.name;
 
-            var damageInfo = new DamageInfo(ContactDamage, _entityId, false);
+            var damageInfo = new DamageInfo(_attackDamage, _entityId, false);
             var damageResult = damageReceiver.ReceiveDamage(damageInfo);
 
             Debug.Log(

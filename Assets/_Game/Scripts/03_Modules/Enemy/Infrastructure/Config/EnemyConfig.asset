@@ -13,6 +13,10 @@ MonoBehaviour:
   m_Name: EnemyConfig
   m_EditorClassIdentifier: BillGameCore.Modules.Enemy::BillGameCore.Modules.Enemy.Infrastructure.Config.EnemyConfig
   _maxHealth: 3
+  _moveSpeed: 1.5
+  _stopDistance: 1
+  _contactDamage: 2
+  _contactDamageInterval: 4
   _gold: 10
   _experience: 50
   _coin: 5
