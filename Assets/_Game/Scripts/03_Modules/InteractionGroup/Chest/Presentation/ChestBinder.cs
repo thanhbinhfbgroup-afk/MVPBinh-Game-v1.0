@@ -3,6 +3,7 @@ using BillGameCore.Modules.InteractionGroup.Chest.Domain;
 using BillGameCore.Modules.InteractionGroup.Chest.Infrastructure.Config;
 using BillGameCore.Modules.InteractionGroup.Chest.Application;
 using BillGameCore.SharedPorts.Economy;
+using VContainer;
 using UnityEngine;
 using System;
 
@@ -12,10 +13,16 @@ namespace BillGameCore.Modules.InteractionGroup.Chest.Presentation
     {
         [SerializeField] private ChestConfig _config;
 
-        private ChestPresenter _presenter;    
         private IRewardGrantService _rewardGrantService;
         private Action _openedCallback;
+        private ChestPresenter _presenter;
 
+        [Inject]
+        public void Construct(
+            IRewardGrantService rewardGrantService)
+        {
+            _rewardGrantService = rewardGrantService;
+        }
         private void Awake()
         {
             if (_config == null)
@@ -37,17 +44,10 @@ namespace BillGameCore.Modules.InteractionGroup.Chest.Presentation
             _presenter = new ChestPresenter(application, view);
             _presenter.Initialize();
         }
-
-        public void SetRewardGrantService(IRewardGrantService rewardGrantService)
-        {
-            _rewardGrantService = rewardGrantService;
-        }
-
         public void SetOpenedCallback(Action openedCallback)
         {
             _openedCallback = openedCallback;
         }
-
         public bool CanInteract()
         {
             return _presenter.CanInteract();

@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 760651575909125070}
   - component: {fileID: 2744101245463892075}
   - component: {fileID: 2199194943894528116}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: AttackSensor
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -81,6 +81,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ce2be2d615f3dec42a72e00d968f1b2f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: BillGameCore.Modules.Player::BillGameCore.Modules.Player.Presentation.AttackSensor
+  _targetLayers:
+    serializedVersion: 2
+    m_Bits: 64
 --- !u!1 &3487661333768335584
 GameObject:
   m_ObjectHideFlags: 0
@@ -92,7 +95,7 @@ GameObject:
   - component: {fileID: 3454074965100156773}
   - component: {fileID: 4332276034671284804}
   - component: {fileID: 2927766305931330914}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: InteractSensor
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -149,7 +152,7 @@ CircleCollider2D:
   m_CompositeOperation: 0
   m_CompositeOrder: 0
   m_Offset: {x: 0, y: 0}
-  m_Radius: 0.3
+  m_Radius: 0.1
 --- !u!114 &2927766305931330914
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -162,6 +165,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ee9b6f3a39038f345a107dc9183ee194, type: 3}
   m_Name: 
   m_EditorClassIdentifier: BillGameCore.Modules.Player::BillGameCore.Modules.Player.Presentation.InteractSensor
+  _targetLayers:
+    serializedVersion: 2
+    m_Bits: 128
 --- !u!1 &4576728726418537621
 GameObject:
   m_ObjectHideFlags: 0
@@ -175,7 +181,7 @@ GameObject:
   - component: {fileID: 7138073263272440874}
   - component: {fileID: 8226381656176022710}
   - component: {fileID: -4880327430812630583}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Player
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -240,7 +246,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: BillGameCore.Modules.Player::BillGameCore.Modules.Player.Presentation.PlayerView
   _rigidbody2D: {fileID: 5448757653126748613}
   _attackSensor: {fileID: 2199194943894528116}
-  _interactSensor: {fileID: 0}
+  _interactSensor: {fileID: 2927766305931330914}
+  _attackSensorForwardOffset: 0.1
+  _interactSensorForwardOffset: 0.12
 --- !u!212 &8226381656176022710
 SpriteRenderer:
   serializedVersion: 2

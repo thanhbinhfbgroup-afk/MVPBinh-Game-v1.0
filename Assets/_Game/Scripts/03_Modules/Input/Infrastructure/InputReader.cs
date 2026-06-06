@@ -1,4 +1,5 @@
 using System;
+using VContainer;
 using BillGameCore.Core.ValueObjects;
 using BillGameCore.Modules.Input.Commands;
 using UnityEngine;
@@ -14,6 +15,16 @@ namespace BillGameCore.Modules.Input.Infrastructure
         private CommandBuffer _commandBuffer;
         private BillEntityId _controlledEntityId;
 
+        [Inject]
+        public void Construct(CommandBuffer commandBuffer)
+        {
+            if (commandBuffer == null)
+            {
+                throw new InvalidOperationException("InputReader requires a CommandBuffer.");
+            }
+
+            _commandBuffer = commandBuffer;
+        }
         public void SetControlledEntity(BillEntityId controlledEntityId)
         {
             if (!controlledEntityId.IsValid)
