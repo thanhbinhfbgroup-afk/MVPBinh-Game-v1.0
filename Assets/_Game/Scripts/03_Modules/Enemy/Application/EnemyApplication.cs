@@ -27,6 +27,16 @@ namespace BillGameCore.Modules.Enemy.Application
             var directionY = targetY - currentY;
             var magnitudeSquared = (directionX * directionX) + (directionY * directionY);
 
+            var detectionRange = _definition.DetectionRange;
+            var detectionRangeSquared = detectionRange * detectionRange;
+
+            if (magnitudeSquared > detectionRangeSquared)
+            {
+                velocityX = 0f;
+                velocityY = 0f;
+                return;
+            }
+
             var stopDistance = _definition.StopDistance;
             var stopDistanceSquared = stopDistance * stopDistance;
 

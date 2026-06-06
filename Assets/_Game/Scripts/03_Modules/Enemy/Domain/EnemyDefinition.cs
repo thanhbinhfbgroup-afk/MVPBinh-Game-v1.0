@@ -4,11 +4,12 @@ namespace BillGameCore.Modules.Enemy.Domain
 {
     public sealed class EnemyDefinition
     {
-        public EnemyDefinition(float maxHealth, float moveSpeed, float stopDistance, float contactDamage, float contactDamageInterval, RewardBundle reward)
+        public EnemyDefinition(float maxHealth, float moveSpeed, float stopDistance, float detectionRange, float contactDamage, float contactDamageInterval, RewardBundle reward)
         {
             MaxHealth = maxHealth;
             MoveSpeed = moveSpeed;
             StopDistance = stopDistance;
+            DetectionRange = detectionRange;
             ContactDamage = contactDamage;
             ContactDamageInterval = contactDamageInterval;
             Reward = reward;
@@ -17,6 +18,7 @@ namespace BillGameCore.Modules.Enemy.Domain
         public float MaxHealth { get; }
         public float MoveSpeed { get; }
         public float StopDistance { get; }
+        public float DetectionRange { get; }
         public float ContactDamage { get; }
         public float ContactDamageInterval { get; }
         public RewardBundle Reward { get; }
