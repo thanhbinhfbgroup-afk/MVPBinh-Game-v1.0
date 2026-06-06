@@ -222,7 +222,7 @@ SpriteRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 0
+  m_SortingOrder: 1
   m_MaskInteraction: 0
   m_Sprite: {fileID: 10913, guid: 0000000000000000f000000000000000, type: 0}
   m_Color: {r: 0.9337665, g: 1, b: 0.4009434, a: 1}
@@ -792,15 +792,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e234863e2b2e01c469185fe8c66bdbab, type: 3}
   m_Name: 
   m_EditorClassIdentifier: BillGameCore.Scenes::BillGameCore.Scenes.SceneBootstrapper
-  _playerPrefab: {fileID: 996777652}
-  _playerConfig: {fileID: 11400000, guid: 3e4662fa5ed2b29408595e7d461083db, type: 2}
-  _inputReader: {fileID: 399803525}
-  _sceneController: {fileID: 1081123473}
   _chests:
   - {fileID: 572331478}
   - {fileID: 435013400}
   _walletHudView: {fileID: 30970985}
-  _enemyConfig: {fileID: 11400000, guid: 63e274341547cfa45879109a623e79ff, type: 2}
   _enemyViews:
   - {fileID: 1707945465}
   - {fileID: 2916627}
@@ -815,6 +810,62 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f333ac2b6345b474e9af68628308a44a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: BillGameCore.Modules.InteractionGroup::BillGameCore.Modules.InteractionGroup.Chest.Presentation.ChestBinder
+--- !u!1 &652050602
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 652050604}
+  - component: {fileID: 652050603}
+  m_Layer: 0
+  m_Name: SceneScope
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &652050603
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 652050602}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e1e267d7e71941f49919b31afab6a8b8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: BillGameCore.Scenes::BillGameCore.Scenes.BootstrapSceneLifetimeScope
+  parentReference:
+    TypeName: 
+  autoRun: 1
+  autoInjectGameObjects: []
+  _inputReader: {fileID: 399803525}
+  _sceneController: {fileID: 1081123473}
+  _playerPrefab: {fileID: 996777652}
+  _playerConfig: {fileID: 11400000, guid: 3e4662fa5ed2b29408595e7d461083db, type: 2}
+  _sceneBootstrapper: {fileID: 537186327}
+  _walletHudView: {fileID: 30970985}
+  _enemyConfig: {fileID: 0}
+  _chests: []
+--- !u!4 &652050604
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 652050602}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -3.11405, y: -0.22409, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &996777652 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 7138073263272440874, guid: 660501ba02b53274e8c632b8237f13fe, type: 3}
@@ -1247,17 +1298,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1467015648}
   m_CullTransparentMesh: 1
---- !u!114 &1653455174 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 2927766305931330914, guid: 660501ba02b53274e8c632b8237f13fe, type: 3}
-  m_PrefabInstance: {fileID: 8430425200452763945}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ee9b6f3a39038f345a107dc9183ee194, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: BillGameCore.Modules.Player::BillGameCore.Modules.Player.Presentation.InteractSensor
 --- !u!1 &1707945464
 GameObject:
   m_ObjectHideFlags: 0
@@ -1590,18 +1630,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
-    - target: {fileID: 2199194943894528116, guid: 660501ba02b53274e8c632b8237f13fe, type: 3}
-      propertyPath: _targetLayers.m_Bits
-      value: 64
-      objectReference: {fileID: 0}
-    - target: {fileID: 2744101245463892075, guid: 660501ba02b53274e8c632b8237f13fe, type: 3}
-      propertyPath: m_Radius
-      value: 0.2
-      objectReference: {fileID: 0}
-    - target: {fileID: 2927766305931330914, guid: 660501ba02b53274e8c632b8237f13fe, type: 3}
-      propertyPath: _targetLayers.m_Bits
-      value: 128
-      objectReference: {fileID: 0}
     - target: {fileID: 3487430308453411855, guid: 660501ba02b53274e8c632b8237f13fe, type: 3}
       propertyPath: m_LocalPosition.x
       value: -5.09
@@ -1642,18 +1670,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 4332276034671284804, guid: 660501ba02b53274e8c632b8237f13fe, type: 3}
-      propertyPath: m_Radius
-      value: 0.1
-      objectReference: {fileID: 0}
     - target: {fileID: 4576728726418537621, guid: 660501ba02b53274e8c632b8237f13fe, type: 3}
       propertyPath: m_Name
       value: Player
       objectReference: {fileID: 0}
-    - target: {fileID: 7138073263272440874, guid: 660501ba02b53274e8c632b8237f13fe, type: 3}
-      propertyPath: _interactSensor
-      value: 
-      objectReference: {fileID: 1653455174}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -1668,6 +1688,7 @@ SceneRoots:
   - {fileID: 537186326}
   - {fileID: 399803526}
   - {fileID: 1081123474}
+  - {fileID: 652050604}
   - {fileID: 1353715301637426241}
   - {fileID: 196778838}
   - {fileID: 1377036272}

@@ -15,6 +15,7 @@ MonoBehaviour:
   _maxHealth: 3
   _moveSpeed: 1.5
   _stopDistance: 1
+  _detectionRange: 3
   _contactDamage: 2
   _contactDamageInterval: 4
   _gold: 10
