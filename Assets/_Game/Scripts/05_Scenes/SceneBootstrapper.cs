@@ -13,7 +13,6 @@ namespace BillGameCore.Scenes
     public sealed class SceneBootstrapper : MonoBehaviour
     {
         [SerializeField] private ChestBinder[] _chests;
-        [SerializeField] private WalletHudView _walletHudView;
         [SerializeField] private EnemyView[] _enemyViews;
 
 
