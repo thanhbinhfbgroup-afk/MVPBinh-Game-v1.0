@@ -109,14 +109,14 @@ namespace BillGameCore.Modules.Input.Infrastructure
             _inputActionGateway?.Dispose();
         }
 
-        public InputActionGateway ValidateConfiguration()
+        public void ValidateConfiguration()
         {
             if (_actions == null)
             {
                 throw new InvalidOperationException("InputReader requires an InputActionAsset.");
             }
 
-            return new InputActionGateway(_actions);
+            using var gateway = new InputActionGateway(_actions);
         }
     }
 }

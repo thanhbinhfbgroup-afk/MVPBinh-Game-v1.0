@@ -42,21 +42,13 @@ namespace BillGameCore.Scenes
                 throw new InvalidOperationException(
                     $"BootstrapSceneLifetimeScope requires '{nameof(_chests)}' to be assigned in the Inspector.");
             }
+            _inputReader.ValidateConfiguration();
 
             builder.RegisterComponent(_inputReader);
             builder.RegisterComponent(_sceneController);
             builder.RegisterComponent(_sceneBootstrapper);
             builder.RegisterComponent(_walletHudView);
-            for (var i = 0; i < _chests.Length; i++)
-            {
-                var chest = _chests[i];
-                if (chest == null)
-                {
-                    continue;
-                }
-
-                builder.RegisterComponent(chest);
-            }
+            
             builder.RegisterInstance(_enemyConfig);
             builder.RegisterInstance(_playerPrefab);
             builder.RegisterInstance(_playerConfig);

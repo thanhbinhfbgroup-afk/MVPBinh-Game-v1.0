@@ -10,7 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6018032877522732652}
   - component: {fileID: 6194584406575231498}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: OpenedVisual
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -104,7 +104,7 @@ GameObject:
   - component: {fileID: 4925889177616700769}
   - component: {fileID: 4601221223956603436}
   - component: {fileID: 874003940416338636}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Chest
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -225,7 +225,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1795517410712171673}
   - component: {fileID: 8771402652751427808}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: ClosedVisual
   m_TagString: Untagged
   m_Icon: {fileID: 0}

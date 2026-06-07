@@ -43,33 +43,10 @@ namespace BillGameCore.Scenes
             _inputReader.SetControlledEntity(_playerRuntime.Id);
             _playerRuntime.SetOnDiedCallback(_sceneController.HandlePlayerDied);
             _walletHudPresenter.Refresh();
-            _sceneController.SetEnemyDeathRewardFlow(_rewardGrantService, _walletHudPresenter);
+            _sceneController.SetRewardGrantService(_rewardGrantService);
 
-            if (_enemyViews != null)
-            {
-                foreach (var enemyView in _enemyViews)
-                {
-                    if (enemyView == null)
-                    {
-                        continue;
-                    }
-
-                    var enemyRuntime = _enemySpawner.Spawn(enemyView);
-                    enemyRuntime.Presenter.OnDiedCallback = _sceneController.HandleEnemyDied;
-                    _enemyRuntimes.Add(enemyRuntime);
-                }
-            }
-
-            foreach (var chest in _chests)
-            {
-                if (chest == null)
-                {
-                    continue;
-                }
-
-                chest.SetOpenedCallback(_walletHudPresenter.Refresh);
-            }
-
+            InitializeEnemyRuntimes();
+            WireChestCallbacks();
         }
 
         private void Update()
@@ -83,7 +60,43 @@ namespace BillGameCore.Scenes
                 _enemyRuntimes[i].Tick(playerWorldPosition);
             }
         }
+        private void InitializeEnemyRuntimes()
+        {
+            if (_enemyViews == null)
+            {
+                return;
+            }
 
+            foreach (var enemyView in _enemyViews)
+            {
+                if (enemyView == null)
+                {
+                    continue;
+                }
+
+                var enemyRuntime = _enemySpawner.Spawn(enemyView);
+                enemyRuntime.Presenter.OnDiedCallback = reward =>
+                {
+                    _sceneController.HandleEnemyDied(reward);
+                    _walletHudPresenter.Refresh();
+                };
+
+                _enemyRuntimes.Add(enemyRuntime);
+            }
+        }
+
+        private void WireChestCallbacks()
+        {
+            foreach (var chest in _chests)
+            {
+                if (chest == null)
+                {
+                    continue;
+                }
+
+                chest.SetOpenedCallback(_walletHudPresenter.Refresh);
+            }
+        }
         private void OnDestroy()
         {
             _playerRuntime?.Dispose();
