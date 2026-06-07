@@ -494,17 +494,9 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
-    - target: {fileID: 3180622648498720147, guid: 8c101322ccda11c40b4b8823c8c69654, type: 3}
-      propertyPath: m_Layer
-      value: 7
-      objectReference: {fileID: 0}
     - target: {fileID: 3260793436960729770, guid: 8c101322ccda11c40b4b8823c8c69654, type: 3}
       propertyPath: m_Name
       value: Chest (1)
-      objectReference: {fileID: 0}
-    - target: {fileID: 3260793436960729770, guid: 8c101322ccda11c40b4b8823c8c69654, type: 3}
-      propertyPath: m_Layer
-      value: 7
       objectReference: {fileID: 0}
     - target: {fileID: 7462015724212519280, guid: 8c101322ccda11c40b4b8823c8c69654, type: 3}
       propertyPath: m_LocalPosition.x
@@ -545,10 +537,6 @@ PrefabInstance:
     - target: {fileID: 7462015724212519280, guid: 8c101322ccda11c40b4b8823c8c69654, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7597494285342137679, guid: 8c101322ccda11c40b4b8823c8c69654, type: 3}
-      propertyPath: m_Layer
-      value: 7
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -792,10 +780,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e234863e2b2e01c469185fe8c66bdbab, type: 3}
   m_Name: 
   m_EditorClassIdentifier: BillGameCore.Scenes::BillGameCore.Scenes.SceneBootstrapper
-  _chests:
-  - {fileID: 572331478}
-  - {fileID: 435013400}
-  _walletHudView: {fileID: 30970985}
+  _chests: []
   _enemyViews:
   - {fileID: 1707945465}
   - {fileID: 2916627}
@@ -849,8 +834,10 @@ MonoBehaviour:
   _playerConfig: {fileID: 11400000, guid: 3e4662fa5ed2b29408595e7d461083db, type: 2}
   _sceneBootstrapper: {fileID: 537186327}
   _walletHudView: {fileID: 30970985}
-  _enemyConfig: {fileID: 0}
-  _chests: []
+  _enemyConfig: {fileID: 11400000, guid: 63e274341547cfa45879109a623e79ff, type: 2}
+  _chests:
+  - {fileID: 572331478}
+  - {fileID: 435013400}
 --- !u!4 &652050604
 Transform:
   m_ObjectHideFlags: 0
@@ -1561,17 +1548,9 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
-    - target: {fileID: 3180622648498720147, guid: 8c101322ccda11c40b4b8823c8c69654, type: 3}
-      propertyPath: m_Layer
-      value: 7
-      objectReference: {fileID: 0}
     - target: {fileID: 3260793436960729770, guid: 8c101322ccda11c40b4b8823c8c69654, type: 3}
       propertyPath: m_Name
       value: Chest
-      objectReference: {fileID: 0}
-    - target: {fileID: 3260793436960729770, guid: 8c101322ccda11c40b4b8823c8c69654, type: 3}
-      propertyPath: m_Layer
-      value: 7
       objectReference: {fileID: 0}
     - target: {fileID: 7462015724212519280, guid: 8c101322ccda11c40b4b8823c8c69654, type: 3}
       propertyPath: m_LocalPosition.x
@@ -1612,10 +1591,6 @@ PrefabInstance:
     - target: {fileID: 7462015724212519280, guid: 8c101322ccda11c40b4b8823c8c69654, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7597494285342137679, guid: 8c101322ccda11c40b4b8823c8c69654, type: 3}
-      propertyPath: m_Layer
-      value: 7
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
