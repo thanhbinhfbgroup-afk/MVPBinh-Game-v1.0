@@ -8,5 +8,6 @@
   <Project Path="BillGameCore.Modules.InteractionGroup.csproj" />
   <Project Path="Assembly-CSharp-Editor.csproj" />
   <Project Path="BillGameCore.Core.csproj" />
+  <Project Path="BillGameCore.Modules.Inventory.csproj" />
   <Project Path="BillGameCore.Modules.Economy.csproj" />
 </Solution>

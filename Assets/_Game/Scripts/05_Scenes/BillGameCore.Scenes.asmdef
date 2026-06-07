@@ -6,6 +6,7 @@
         "BillGameCore.SharedPorts",
         "BillGameCore.Composition",
         "BillGameCore.Modules.Input",
+        "BillGameCore.Modules.Inventory",
         "BillGameCore.Modules.Player",
         "BillGameCore.Modules.Enemy",
         "VContainer",

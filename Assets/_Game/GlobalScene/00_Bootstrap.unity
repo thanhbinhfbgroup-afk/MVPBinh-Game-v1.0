@@ -780,7 +780,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e234863e2b2e01c469185fe8c66bdbab, type: 3}
   m_Name: 
   m_EditorClassIdentifier: BillGameCore.Scenes::BillGameCore.Scenes.SceneBootstrapper
-  _chests: []
+  _chests:
+  - {fileID: 572331478}
+  - {fileID: 435013400}
   _enemyViews:
   - {fileID: 1707945465}
   - {fileID: 2916627}

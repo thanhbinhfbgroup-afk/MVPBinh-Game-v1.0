@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1fb0f1df978da5a4eb63a3c7b80fddc3, type: 3}
   m_Name: PlayerConfig
   m_EditorClassIdentifier: BillGameCore.Modules.Player::BillGameCore.Modules.Player.Infrastructure.Config.PlayerConfig
-  _maxHealth: 10
+  _maxHealth: 10000
   _moveSpeed: 5
   _attackDamage: 1
   _attackRadius: 0.2
