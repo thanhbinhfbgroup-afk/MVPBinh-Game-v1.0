@@ -25,14 +25,15 @@ Mọi AI hoặc người sửa code phải đọc và tuân thủ tài liệu n�
 - `03_Modules/Inventory`
 - `03_Modules/Enemy`
 - `03_Modules/InteractionGroup/Chest`
+- `03_Modules/InteractionGroup/Loot`
 - `04_Composition/ProjectLifetimeScope`
 - `05_Scenes/BootstrapSceneLifetimeScope`
 - `05_Scenes/SceneBootstrapper`
 - `05_Scenes/SceneController`
 
-**Ghi chú tích hợp Enemy:** `EnemySpawner` được register trong scene scope theo kiểu optional. Chỉ khi gán đủ `EnemyView prefab` và `EnemyConfig` trong Inspector thì `BootstrapSceneLifetimeScope` mới register `EnemySpawner`. `SceneBootstrapper` hiện chưa tự spawn enemy vì chưa có contract vị trí/spawn wave.
+**Ghi chú tích hợp Enemy:** baseline hiện tại dùng **scene-placed enemy objects** qua `EnemyBinder`. `BootstrapSceneLifetimeScope` register `EnemyRuntimeFactory`, còn `SceneBootstrapper` giao factory này cho `SceneController.InitializeEnemyBinders(...)` để mỗi `EnemyBinder` tự nhận một `EnemyRuntime` cho object enemy đã có sẵn trong scene. `EnemySpawner` vẫn tồn tại trong module Enemy nhưng chưa nằm trên startup path hiện tại và chưa có contract vị trí/wave.
 
-**Baseline scene asset hiện tại:** `Assets/_Game/GlobalScenes/00_Bootstrap.unity` có `SceneScope` gắn `BootstrapSceneLifetimeScope`, `Input` chỉ gắn `InputReader`, `SceneController`, `PlayerView` prefab ở `Assets/_Game/Prefabs/Player/PlayerView.prefab`, và `PlayerConfig` ở `Assets/_Game/Data/Settings/PlayerConfig.asset`. `InputReader` trỏ trực tiếp tới `Assets/Settings/InputSystem_Actions.inputactions` qua field `_actions`; không dùng `PlayerInput` component và không dùng Generate C# wrapper của Unity Input System.
+**Baseline scene asset hiện tại:** `Assets/_Game/GlobalScenes/00_Bootstrap.unity` có root `ProjectScope` gắn `ProjectLifetimeScope`, child `SceneScope` gắn `BootstrapSceneLifetimeScope`, `Input` chỉ gắn `InputReader`, `SceneController`, `WalletReadSource`, `InventoryReadSource`, `WalletHudView`, `InventoryHudView`, `PlayerDeathHudView`, scene-placed `ChestBinder` và `EnemyBinder`, cùng `PlayerView` prefab ở `Assets/_Game/Prefabs/Player/PlayerView.prefab`, `PlayerConfig` ở `Assets/_Game/Data/Settings/PlayerConfig.asset`, và `LootBinder` prefab ở `Assets/_Game/Prefabs/InteractionGroup/Loot/LootBinder.prefab`. `InputReader` trỏ trực tiếp tới `Assets/Settings/InputSystem_Actions.inputactions` qua field `_actions`; `EventSystem/InputSystemUIInputModule` cũng dùng cùng `InputActionAsset`. Không dùng `PlayerInput` component và không dùng Generate C# wrapper của Unity Input System.
 
 ---
 
@@ -42,7 +43,7 @@ Mọi AI hoặc người sửa code phải đọc và tuân thủ tài liệu n�
 - **Core tối thiểu.** Core chỉ chứa value objects và contracts thật sự dùng chung. Core không có game flow, không có UnityEngine, không có dependency package ngoài BCL.
 - **SharedPorts là biên giao tiếp giữa module.** Module này muốn nói chuyện với module khác thì đi qua `SharedPorts` hoặc MessagePipe khi đã unlock.
 - **Composition không biết Scenes.** Tuyệt đối không tạo reference `Composition -> Scenes`.
-- **Scenes sở hữu orchestration của scene.** Startup scene nằm ở `05_Scenes/SceneBootstrapper`, không nằm ở `04_Composition/GameBootstrapper`.
+- **Scenes sở hữu orchestration của scene.** Startup scene nằm ở `05_Scenes/SceneBootstrapper`, không nằm ở `04_Composition`.
 - **Runtime-per-entity.** `State`, `Application`, `Presenter`, `Runtime` của entity được tạo bởi spawner/binder, không register vào DI container.
 - **MonoBehaviour chỉ forward hoặc write Unity output.** Business logic nằm ở Application/Presenter tùy layer, không để trong View.
 
@@ -145,13 +146,18 @@ Assets/_Game/
     │
     ├── 04_Composition/
     │   ├── BillGameCore.Composition.asmdef
-    │   ├── ProjectLifetimeScope.cs
-    │   ├── SceneLifetimeScope.cs  (generic/legacy placeholder, không chứa scene orchestration)
-    │   └── GameBootstrapper.cs    (project-level placeholder)
+    │   └── ProjectLifetimeScope.cs
     │
     └── 05_Scenes/
         ├── BillGameCore.Scenes.asmdef
         ├── BootstrapSceneLifetimeScope.cs
+        ├── WalletReadSource.cs
+        ├── WalletHudView.cs
+        ├── InventoryReadSource.cs
+        ├── InventoryHudView.cs
+        ├── PlayerDeathHudView.cs
+        ├── WalletService.cs
+        ├── RewardGrantService.cs
         ├── SceneBootstrapper.cs
         └── SceneController.cs
 
@@ -177,9 +183,9 @@ Core/Combat/IDamageReceiver.cs
 Core/Interaction/IInteractable.cs
 Core/Inventory/ItemStack.cs
 Core/Rewards/RewardBundle.cs
-Core/Save/ISaveSnapshotProvider.cs
-Core/Save/ISaveSnapshotConsumer.cs
 ```
+
+`Core/Save/` hiện mới là placeholder folder; các save snapshot interfaces chưa materialize trong baseline hiện tại.
 
 Quy tắc Core:
 - `BillEntityId.New()` chỉ gọi trong spawner/binder nơi entity instance được tạo.
@@ -237,6 +243,11 @@ Implemented by:
 Consumed by:
 - UI, loot, chest/reward interaction khi cần inventory.
 
+Quy ước hiện tại:
+- `IInventoryReadService` expose `event Action Changed`.
+- `IInventoryReadService.GetItems()` trả snapshot read-only list.
+- `IInventoryWriteService` hiện chỉ có `AddItem(ItemStack)` và `RemoveItem(itemId, amount)`.
+
 ### Economy contracts
 
 ```text
@@ -246,41 +257,28 @@ SharedPorts/Economy/IRewardGrantService.cs
 
 Status hiện tại:
 - Contract đã tồn tại.
-- Implementation chưa tồn tại.
-- `IWalletService` là read-only port cho UI/HUD: `Gold`, `Experience`.
+- `WalletService` và `RewardGrantService` đã tồn tại trong `05_Scenes` như baseline scene-scope implementation, chưa tách thành economy module/project-scope service riêng.
+- `IWalletService` là read-only port cho UI/HUD: `Gold`, `Experience`, `Changed`.
 - `IRewardGrantService` là cổng grant toàn bộ `RewardBundle`: `void Grant(RewardBundle bundle)`.
+- `IRewardGrantService` chỉ được gọi khi reward thực sự được nhận. Với chest thì grant lúc mở chest; với enemy world-loot thì grant lúc loot được nhặt, không grant ngay ở enemy death.
 - Implementation mục tiêu nên là `RewardGrantService`, điều phối reward vào đúng hệ thống sở hữu dữ liệu. Không mặc định cho `EconomyService` ôm cả item reward.
 
 ### Player read contract
 
-```text
-SharedPorts/Player/IPlayerReadService.cs
-```
-
-Implemented by:
-- `PlayerApplication`
-
-Không dùng contract này cho Enemy. Enemy không phải Player.
+`SharedPorts/Player/` hiện mới là placeholder folder; `IPlayerReadService` chưa materialize trong baseline hiện tại.
 
 ### Messages
 
-```text
-SharedPorts/Messages/EnemyDiedMessage.cs
-SharedPorts/Messages/ItemPickedUpMessage.cs
-```
-
 Status:
-- Message types đã tồn tại.
+- `SharedPorts/Messages/` hiện mới là placeholder folder; các message types như `EnemyDiedMessage` và `ItemPickedUpMessage` chưa materialize trong baseline hiện tại.
 - MessagePipe chưa là backbone hiện tại.
 - Chỉ dùng MessagePipe từ slice combat/reward/event khi đã đăng ký broker rõ ràng.
-- `EnemyDiedMessage` không chứa `UnityEngine.Vector2`; vị trí chết enemy đi qua scene callback/presentation layer cho tới khi có value object engine-free được duyệt.
-- `ItemPickedUpMessage` giữ `PickerId` và `ItemStack` để biết entity nào đã nhặt item.
 
 ---
 
 ## 7. Composition
 
-Composition chỉ chứa project-level composition và placeholder chung. Composition không chứa scene-specific orchestration.
+Composition hiện tại chỉ chứa project-level composition. Composition không chứa scene-specific orchestration.
 
 ### ProjectLifetimeScope
 
@@ -297,6 +295,8 @@ InventoryService as implemented interfaces
 ```
 
 `InventoryService` sống project-scope vì inventory cần persist qua scene.
+
+Baseline scene hiện tại có root `ProjectScope` gắn `ProjectLifetimeScope`, và `SceneScope/BootstrapSceneLifetimeScope` phải trỏ parent scope về `ProjectScope` để resolve được `IInventoryReadService` và `IInventoryWriteService`.
 
 Cho phép register sau này:
 - SaveService
@@ -331,12 +331,15 @@ Nhiệm vụ:
 - Register `InputCommandDispatcher` as `IInputCommandSource`.
 - Register scene component `InputReader`.
 - Register scene component `SceneController`.
+- Register scene component `WalletReadSource`.
+- Register scene component `InventoryReadSource`.
 - Register `PlayerView` prefab.
 - Register `PlayerConfig`.
 - Register `PlayerSpawner`.
-- Optionally register `EnemyView` prefab.
-- Optionally register `EnemyConfig`.
-- Optionally register `EnemySpawner`.
+- Register `WalletService` as `IWalletService` and `IWalletWriteService`.
+- Register `RewardGrantService` as `IRewardGrantService`.
+- Register `EnemyRuntimeFactory`.
+- Register `LootSpawner`.
 - Register `SceneBootstrapper` as entry point.
 
 Các field phải gán trong Inspector:
@@ -344,27 +347,38 @@ Các field phải gán trong Inspector:
 ```text
 InputReader
 SceneController
+WalletReadSource
+InventoryReadSource
 PlayerView prefab
 PlayerConfig
-EnemyView prefab        (optional, chỉ cần nếu muốn resolve EnemySpawner)
-EnemyConfig             (optional, chỉ cần nếu muốn resolve EnemySpawner)
+LootBinder prefab
 ```
 
-Không gán thiếu field bắt buộc. Nếu thiếu `InputReader`, `SceneController`, `PlayerView prefab` hoặc `PlayerConfig`, VContainer build hoặc runtime startup có thể fail. Enemy fields là optional nhưng phải gán đủ cả prefab và config nếu muốn register `EnemySpawner`.
+Không gán thiếu field bắt buộc. Nếu thiếu `InputReader`, `SceneController`, `WalletReadSource`, `InventoryReadSource`, `PlayerView prefab`, `PlayerConfig` hoặc `LootBinder prefab`, VContainer build hoặc runtime startup có thể fail.
 
-`BootstrapSceneLifetimeScope.Configure()` phải validate các field bắt buộc trước khi register. Nếu thiếu `InputReader`, `SceneController`, `PlayerView prefab` hoặc `PlayerConfig`, scope phải fail sớm bằng lỗi rõ tên field, không để NullReference mơ hồ ở startup.
+`BootstrapSceneLifetimeScope.Configure()` phải validate các field bắt buộc trước khi register. Nếu thiếu một field bắt buộc, scope phải fail sớm bằng lỗi rõ tên field, không để NullReference mơ hồ ở startup.
 
-`InputReader.ValidateConfiguration()` phải được gọi từ scene scope để xác nhận `InputActionAsset` đã được gán, action map `Player`, và các action `Player/Move`, `Player/Attack`, `Player/Interact` tồn tại trước khi runtime đọc input.
+`InputReader.ValidateConfiguration()` phải được gọi từ scene scope để xác nhận `InputActionAsset` đã được gán, action map `Player` và `UI`, cùng các action `Player/Move`, `Player/Attack`, `Player/Interact`, `UI/Submit` tồn tại trước khi runtime đọc input.
 
 Scene `Bootstrap.unity` baseline hiện có:
 
 ```text
-SceneScope
-  -> BootstrapSceneLifetimeScope
+ProjectScope
+  -> ProjectLifetimeScope
+  -> SceneScope
+       -> BootstrapSceneLifetimeScope
 Input
   -> InputReader
 SceneController
   -> SceneController
+WalletReadSource
+  -> WalletReadSource
+InventoryReadSource
+  -> InventoryReadSource
+Canvas
+  -> WalletHudView
+  -> InventoryHudView
+  -> PlayerDeathHudView
 ```
 
 ### SceneBootstrapper
@@ -379,6 +393,10 @@ Nhiệm vụ:
 - Spawn Player bằng `PlayerSpawner.Spawn(Vector2.zero)`.
 - Gán controlled entity cho `InputReader`.
 - Wire `PlayerPresenter.OnDiedCallback` sang `SceneController.HandlePlayerDied`.
+- Gán `IWalletService` vào `WalletReadSource`.
+- Gán `IInventoryReadService` vào `InventoryReadSource`.
+- Gán `IRewardGrantService`, `IInventoryWriteService`, `LootSpawner`, `IInputContextService` vào `SceneController`.
+- Gọi `SceneController.InitializeEnemyBinders(EnemyRuntimeFactory)`.
 - Dispose `PlayerRuntime` khi scope dispose.
 
 Không được:
@@ -397,8 +415,10 @@ Scenes/SceneController.cs
 Nhiệm vụ:
 - Mediator cho scene-level events.
 - `HandlePlayerDied(...)` là handler riêng cho player death.
-- `HandleEnemyDied(...)` dành cho enemy death/reward/loot khi Enemy được tích hợp sau.
-- `SetRewardGrantService(IRewardGrantService)` chỉ dùng khi EconomyService đã tồn tại.
+- `HandleEnemyDied(...)` spawn world loot từ `RewardBundle` và/hoặc `ItemStack`.
+- `HandleLootCollected(...)` route reward loot sang `IRewardGrantService` và item loot sang `IInventoryWriteService`.
+- `HandleChestOpened(...)` grant chest reward.
+- `SetRewardGrantService(...)`, `SetInventoryWriteService(...)`, `SetLootSpawner(...)`, `SetInputContextService(...)` là scene-wiring setters được gọi từ `SceneBootstrapper`.
 
 Không được:
 - Dùng `Find()`, `FindObjectOfType()`, scene locator.
@@ -432,15 +452,17 @@ Files:
 Rules:
 - `CommandBuffer.Enqueue()` chỉ được gọi từ `InputReader`.
 - `InputCommandDispatcher` là adapter `CommandBuffer -> IInputCommandSource`.
-- `InputActionGateway` là wrapper tự viết quanh `InputActionAsset`. Gateway clone asset runtime, cache action maps/actions cần dùng, bật/tắt map theo `InputContext`, và expose typed reads cho `InputReader`.
+- `InputActionGateway` là wrapper tự viết quanh `InputActionAsset`. Gateway cache action maps/actions cần dùng, bật/tắt map theo `InputContext`, và expose typed reads cho `InputReader`.
 - `InputActionGateway` dùng `InputContextNames`, không dùng `PlayerInputContext`, `VehicleInputContext`, `UIInputContext`.
 - `InputActionGateway` có `CurrentContext`; khi nhận context không hỗ trợ thì phải throw lỗi rõ, không fallback ngầm về Player.
 - `InputContextNames` là nơi duy nhất trong module Input gom tên action map: `Player`, `UI`, `Vehicle`.
-- `InputReader` là MonoBehaviour, giữ serialized `InputActionAsset`, dùng `InputActionGateway` để đọc New Input System và dịch raw input thành command object.
+- `InputReader` là MonoBehaviour, giữ serialized `InputActionAsset`, dùng `InputActionGateway` để đọc New Input System và dịch raw input thành command object. `InputReader` implement `IInputContextService`.
 - `InputReader` nhận `CommandBuffer` qua `[Inject]`.
 - `InputReader.SetControlledEntity(BillEntityId)` phải validate `BillEntityId.IsValid`.
 - `InputReader.ReadPlayerMap()` enqueue `MoveCommand` mỗi frame, kể cả khi không di chuyển, để consumer có thể set velocity về `0`.
-- `InputReader` có fallback editor-only để tự gán `Assets/Settings/InputSystem_Actions.inputactions` nếu `_actions` bị null trong Editor sau refresh scene/script. Đây chỉ là safety net cho baseline scene, không phải service locator runtime. Khi dự án có nhiều scene hoặc nhiều input asset, từng scene phải gán `_actions` rõ ràng hoặc dùng scene/input config được duyệt.
+- `InputReader.SwitchContext(...)` phải disable map cũ, set context mới, enable map mới, rồi clear command buffer.
+- `InputReader.WasSubmitPressedThisFrame()` chỉ đọc được khi context hiện tại là `UI` và được dùng cho death/restart flow.
+- `InputReader._actions` phải được gán rõ trong scene. `InputReader` và `EventSystem/InputSystemUIInputModule` phải dùng cùng một `InputActionAsset`.
 - Không gắn `PlayerInput` component vào scene object `Input`.
 - Không bật Generate C# wrapper trên `.inputactions`; wrapper chính thức của dự án là `InputActionGateway`.
 - Entity presenter không được biết `MoveCommand`, `AttackCommand`, `InteractCommand` concrete types.
@@ -451,7 +473,7 @@ Flow:
 
 ```text
 InputReader.Update()
-  -> đọc InputActionGateway trên runtime clone của InputActionAsset
+  -> đọc InputActionGateway trên InputActionAsset đã gán ở scene
   -> enqueue concrete command với ControlledEntityId hợp lệ
 InputCommandDispatcher.TryDequeue()
   -> trả ICommand cho consumer
@@ -477,6 +499,9 @@ Modules/Player/Domain/PlayerDefinition.cs
 Modules/Player/Domain/PlayerState.cs
 Modules/Player/Application/PlayerApplication.cs
 Modules/Player/Infrastructure/Config/PlayerConfig.cs
+Modules/Player/Presentation/PlayerAttackSensor.cs
+Modules/Player/Presentation/PlayerInteractSensor.cs
+Modules/Player/Presentation/PlayerCombatReceiver.cs
 Modules/Player/Presentation/PlayerView.cs
 Modules/Player/Presentation/PlayerPresenter.cs
 Modules/Player/Presentation/PlayerSpawner.cs
@@ -501,7 +526,6 @@ Domain không dùng UnityEngine.
 
 `PlayerApplication`:
 - implement `IDamageReceiver`.
-- implement `IPlayerReadService`.
 - không dùng UnityEngine.
 - không biết world position.
 - `OnDied` chỉ emit `BillEntityId` và `RewardBundle`.
@@ -510,16 +534,21 @@ Domain không dùng UnityEngine.
 
 `PlayerView`:
 - MonoBehaviour.
-- callback chỉ forward sang presenter.
-- write Rigidbody2D/Animator output theo lệnh từ presenter.
-- forward cả `OnTriggerEnter2D` và `OnTriggerExit2D` để presenter giữ interact target hiện tại.
+- expose `WorldPosition`, `PlayerAttackSensor`, `PlayerInteractSensor`.
+- write Rigidbody2D output theo lệnh từ presenter.
+- có `SetDeadState()` để disable collider/combat receiver/sensors khi player chết.
 
 `PlayerPresenter`:
 - đọc input qua `IInputCommandSource`.
 - không biết concrete command classes.
 - lấy world position từ `PlayerView.WorldPosition` khi player chết.
 - gọi `OnDiedCallback(BillEntityId, RewardBundle, Vector2)` cho scene layer.
-- nhận `InteractCommand` thì interact với target đang overlap hiện tại; không dùng pending flag phụ thuộc đúng frame `OnTriggerEnter2D`.
+- nhận `InteractCommand` thì interact với target hiện tại từ `PlayerInteractSensor.CurrentTarget`.
+- forward damage xuống `PlayerApplication.ReceiveDamage(...)`.
+
+`PlayerCombatReceiver`:
+- scene-side adapter `MonoBehaviour, IDamageReceiver`.
+- chỉ forward `ReceiveDamage()` từ physics/scene boundary vào `PlayerRuntime`.
 
 `PlayerSpawner`:
 - có đúng 1 public constructor để VContainer resolve rõ ràng.
@@ -560,8 +589,6 @@ Files:
 ```text
 Modules/Inventory/Domain/InventoryState.cs
 Modules/Inventory/Application/InventoryService.cs
-Modules/Inventory/Infrastructure/Config/InventorySettings.cs
-Modules/Inventory/Infrastructure/Persistence/InventorySaveData.cs
 ```
 
 `InventoryService`:
@@ -569,22 +596,21 @@ Modules/Inventory/Infrastructure/Persistence/InventorySaveData.cs
 - owns `InventoryState`.
 - implements `IInventoryReadService`.
 - implements `IInventoryWriteService`.
-- implements `ISaveSnapshotProvider<InventorySaveData>`.
-- implements `ISaveSnapshotConsumer<InventorySaveData>`.
+- expose `Changed` event qua `IInventoryReadService`.
 
 Rules:
 - Inventory module giữ tên `Inventory`, không đổi thành `InventoryGroup`.
 - `InventoryState` không vào DI.
-- `InventorySettings` chỉ chứa config data.
 - Cross-module access đi qua `IInventoryReadService` hoặc `IInventoryWriteService`.
+- `InventoryService` trả snapshot copy từ `GetItems()`, không trả live list nội bộ.
+- Save/load inventory chưa materialize trong baseline hiện tại.
 
 Current behavior:
 - `GetItems()` trả snapshot read-only copy, không trả live `InventoryState.Items`.
 - `HasItem(itemId, minAmount)`
 - `AddItem(ItemStack)`
 - `RemoveItem(itemId, amount)`
-- `CreateSnapshot()`
-- `RestoreSnapshot(InventorySaveData)`
+- `Changed` fire khi inventory thay đổi
 
 ---
 
@@ -615,6 +641,31 @@ Rules:
 - Binder được phép tự tạo `ChestApplication`, `ChestState`, `ChestPresenter` trong `Awake`.
 - Nếu sau này Chest cần `[Inject] IInventoryWriteService`, prefab phải được instantiate bằng `container.Instantiate()`, không dùng `Object.Instantiate()`.
 
+### InteractionGroup / Loot
+
+Files:
+
+```text
+Modules/InteractionGroup/Loot/Domain/LootDefinition.cs
+Modules/InteractionGroup/Loot/Domain/LootState.cs
+Modules/InteractionGroup/Loot/Application/LootApplication.cs
+Modules/InteractionGroup/Loot/Application/LootCollectResult.cs
+Modules/InteractionGroup/Loot/Presentation/LootView.cs
+Modules/InteractionGroup/Loot/Presentation/LootPresenter.cs
+Modules/InteractionGroup/Loot/Presentation/LootBinder.cs
+Modules/InteractionGroup/Loot/Presentation/LootSpawner.cs
+```
+
+Rules:
+- `LootBinder` implements `IInteractable`.
+- `LootBinder` khởi đầu ở trạng thái inert và chỉ hoạt động sau `Initialize(...)`.
+- `LootDefinition` hiện support hai payload path:
+  - `RewardBundle`
+  - `ItemStack`
+- Một `LootBinder` chỉ mang một payload thực tế tại một thời điểm.
+- Khi enemy chết có cả reward và item, scene hiện tại spawn **hai loot object** tách nhẹ vị trí, không nhồi cả hai payload vào một binder.
+- `LootSpawner` chỉ instantiate prefab và initialize payload; grant reward hoặc add item luôn đi qua `SceneController.HandleLootCollected(...)`.
+
 ---
 
 ## 13. Module Enemy
@@ -632,9 +683,13 @@ Files:
 Modules/Enemy/Domain/EnemyDefinition.cs
 Modules/Enemy/Domain/EnemyState.cs
 Modules/Enemy/Application/EnemyApplication.cs
+Modules/Enemy/Application/EnemyHealthReadModel.cs
 Modules/Enemy/Infrastructure/Config/EnemyConfig.cs
+Modules/Enemy/Presentation/EnemyAttackSensor.cs
+Modules/Enemy/Presentation/EnemyBinder.cs
 Modules/Enemy/Presentation/EnemyView.cs
 Modules/Enemy/Presentation/EnemyPresenter.cs
+Modules/Enemy/Presentation/EnemyRuntimeFactory.cs
 Modules/Enemy/Presentation/EnemySpawner.cs
 Modules/Enemy/Presentation/EnemyRuntime.cs
 ```
@@ -644,7 +699,7 @@ Modules/Enemy/Presentation/EnemyRuntime.cs
 `EnemyDefinition`:
 - config data runtime bất biến.
 - tạo từ `EnemyConfig.ToDefinition()`.
-- chứa movement/health/stamina và reward config: `GoldReward`, `ExperienceReward`.
+- chứa health/combat config, reward config (`GoldReward`, `ExperienceReward`), và optional item drop từ `DroppedItemId`, `DroppedItemAmount`.
 
 `EnemyState`:
 - runtime mutable state cho một enemy instance.
@@ -656,30 +711,43 @@ Modules/Enemy/Presentation/EnemyRuntime.cs
 
 `EnemyApplication`:
 - implement `IDamageReceiver`.
-- không implement `IPlayerReadService`.
 - không dùng UnityEngine.
 - không biết world position.
-- `OnDied` chỉ emit `BillEntityId` và `RewardBundle`.
-- tạo `RewardBundle` từ reward config trong `EnemyDefinition`.
+- `OnDied` emit `RewardBundle` và `ItemStack`.
+- tạo `RewardBundle` và item drop từ `EnemyDefinition`.
 
 ### Presentation
 
 `EnemyView`:
 - MonoBehaviour.
 - callback chỉ forward sang presenter.
-- write Rigidbody2D/Animator output theo lệnh từ presenter.
+- expose `WorldPosition`.
+
+`EnemyAttackSensor`:
+- scene-side trigger sensor để enemy biết `CurrentTarget`.
+- chỉ target collider scene hợp lệ, không couple trực tiếp sang player internals ngoài combat boundary.
+
+`EnemyBinder`:
+- scene boundary/host cho enemy object đã có sẵn trong scene.
+- own serialized `EnemyConfig`, `EnemyView`, attack sensor, target collider.
+- nhận `EnemyRuntime` từ scene orchestration qua `InitializeRuntime(...)`.
+- không còn tự assemble runtime trên gameplay path chính.
 
 `EnemyPresenter`:
 - không đọc player input.
 - không biết concrete command classes.
-- lấy world position từ `EnemyView.WorldPosition` khi enemy chết.
-- gọi `OnDiedCallback(BillEntityId, RewardBundle, Vector2)` cho scene layer.
+- forward `RewardBundle` và `ItemStack` từ application lên binder/runtime path.
+
+`EnemyRuntimeFactory`:
+- assemble `EnemyDefinition`, `EnemyState`, `EnemyApplication`, `EnemyPresenter`, `EnemyRuntime` từ `EnemyConfig`.
+- là factory dùng trên runtime path chính của scene-placed enemy baseline hiện tại.
 
 `EnemySpawner`:
 - có đúng 1 public constructor để VContainer resolve rõ ràng.
 - gọi `BillEntityId.New()`.
 - tạo `EnemyDefinition`, `EnemyState`, `EnemyApplication`, `EnemyPresenter`, `EnemyRuntime`.
 - instantiate `EnemyView` bằng `Object.Instantiate` vì `EnemyView` hiện không có `[Inject]`.
+- hiện vẫn tồn tại trong module nhưng chưa nằm trên startup path của `00_Bootstrap`.
 
 `EnemyRuntime`:
 - handle bất biến cho một enemy instance.
@@ -688,20 +756,27 @@ Modules/Enemy/Presentation/EnemyRuntime.cs
 
 Scene integration:
 - `Scenes.asmdef` reference `BillGameCore.Modules.Enemy`.
-- `BootstrapSceneLifetimeScope` register `EnemySpawner` chỉ khi `_enemyPrefab` và `_enemyConfig` đều được gán.
-- `SceneBootstrapper` chưa tự spawn enemy; spawn point/wave contract sẽ được thiết kế ở slice sau.
+- `SceneBootstrapper` giao `EnemyRuntimeFactory` cho `SceneController.InitializeEnemyBinders(...)`.
+- `SceneController.InitializeEnemyBinders(...)` set callback và init runtime cho từng `EnemyBinder` scene-placed.
+- `EnemySpawner`/wave/spawn point contract vẫn deferred cho slice sau.
 
 Approved enemy death flow:
 
 ```text
 EnemyApplication.ReceiveDamage()
   -> clamp damage âm về 0
-  -> OnDied(BillEntityId, RewardBundle)
-    -> EnemyPresenter lấy EnemyView.WorldPosition
-    -> OnDiedCallback(BillEntityId, RewardBundle, Vector2)
+  -> OnDied(RewardBundle, ItemStack)
+    -> EnemyPresenter forward reward + item drop
+    -> EnemyBinder lấy EnemyView.WorldPosition
+    -> DiedCallback(BillEntityId, RewardBundle, ItemStack, Vector2)
       -> SceneController.HandleEnemyDied()
-        -> IRewardGrantService.Grant(bundle) nếu EconomyService đã tồn tại
-        -> LootSpawner.Spawn(...) khi Loot được build
+        -> spawn reward loot nếu có RewardBundle
+        -> spawn item loot nếu có ItemStack
+LootBinder / LootPresenter
+  -> khi player nhặt loot
+    -> SceneController.HandleLootCollected(...)
+      -> reward loot: IRewardGrantService.Grant(bundle)
+      -> item loot: IInventoryWriteService.AddItem(itemStack)
 ```
 
 ---
@@ -722,7 +797,7 @@ Không được:
 - Dùng để che giấu dependency đáng ra phải là constructor hoặc `[Inject]`.
 
 Hiện tại:
-- Message types đã có trong `SharedPorts/Messages`.
+- `SharedPorts/Messages` mới là placeholder folder, chưa có concrete message types trong baseline hiện tại.
 - Broker chưa được register làm backbone.
 
 ---
@@ -735,7 +810,8 @@ Project scope hiện tại:
 
 ```text
 ProjectLifetimeScope
-  -> InventoryService as implemented interfaces
+  -> InventoryService as IInventoryReadService
+  -> InventoryService as IInventoryWriteService
 ```
 
 Project scope dùng cho services sống qua scene:
@@ -743,6 +819,15 @@ Project scope dùng cho services sống qua scene:
 - Save
 - Economy
 - Audio
+
+Baseline scene hiện tại dùng hierarchy:
+
+```text
+ProjectScope
+  -> ProjectLifetimeScope
+  -> SceneScope
+       -> BootstrapSceneLifetimeScope
+```
 
 ### Scene scope
 
@@ -754,12 +839,15 @@ BootstrapSceneLifetimeScope
   -> InputCommandDispatcher as IInputCommandSource
   -> InputReader component
   -> SceneController component
+  -> WalletReadSource component
+  -> InventoryReadSource component
   -> PlayerView prefab
   -> PlayerConfig
+  -> WalletService as IWalletService/IWalletWriteService
+  -> RewardGrantService as IRewardGrantService
+  -> EnemyRuntimeFactory
+  -> LootSpawner
   -> PlayerSpawner
-  -> EnemyView prefab       (optional)
-  -> EnemyConfig            (optional)
-  -> EnemySpawner           (optional, only when both Enemy fields are assigned)
   -> SceneBootstrapper entry point
 ```
 
@@ -794,6 +882,12 @@ BootstrapSceneLifetimeScope.Configure()
   -> SceneBootstrapper.Start()
     -> PlayerSpawner.Spawn(Vector2.zero)
     -> InputReader.SetControlledEntity(playerRuntime.Id)
+    -> WalletReadSource.SetWalletService(...)
+    -> InventoryReadSource.SetInventoryReadService(...)
+    -> SceneController.SetRewardGrantService(...)
+    -> SceneController.SetInventoryWriteService(...)
+    -> SceneController.SetLootSpawner(...)
+    -> SceneController.InitializeEnemyBinders(EnemyRuntimeFactory)
     -> playerRuntime.Presenter.OnDiedCallback = SceneController.HandlePlayerDied
 ```
 
@@ -804,9 +898,8 @@ InputReader.ReadPlayerMap()
   -> CommandBuffer.Enqueue(MoveCommand)
 InputCommandDispatcher.TryDequeue()
   -> PlayerPresenter reads IMoveCommand
-  -> PlayerApplication.Tick(dirX, dirY, deltaTime)
-  -> PlayerView.SetVelocity(...)
-  -> PlayerView.UpdateMoveAnimation(...)
+  -> PlayerApplication.ComputeMoveVelocity(dirX, dirY, out velocityX, out velocityY)
+  -> PlayerView.SetMoveVelocity(...)
 ```
 
 ### Player interact
@@ -814,8 +907,8 @@ InputCommandDispatcher.TryDequeue()
 ```text
 InputReader
   -> InteractCommand
-PlayerView.OnTriggerEnter2D / OnTriggerExit2D
-  -> PlayerPresenter cập nhật current IInteractable target
+PlayerInteractSensor.CurrentTarget
+  -> PlayerPresenter đọc target hiện tại
 PlayerPresenter
   -> khi nhận InteractCommand
   -> CanInteract()
@@ -829,6 +922,50 @@ Consumer uses IInventoryWriteService
   -> InventoryService.AddItem/RemoveItem
   -> InventoryState changes
   -> Changed event
+```
+
+### Enemy death -> loot pickup
+
+```text
+EnemyApplication.ReceiveDamage()
+  -> nếu chết: DiedCallback(RewardBundle, ItemStack)
+EnemyBinder
+  -> DiedCallback(BillEntityId, RewardBundle, ItemStack, Vector2)
+SceneController.HandleEnemyDied(...)
+  -> spawn reward loot nếu có
+  -> spawn item loot nếu có
+LootBinder.Interact()
+  -> LootApplication.TryCollect()
+SceneController.HandleLootCollected(...)
+  -> reward loot: IRewardGrantService.Grant(...)
+  -> item loot: IInventoryWriteService.AddItem(...)
+```
+
+### Player death -> restart
+
+```text
+PlayerApplication.ReceiveDamage()
+  -> nếu chết: DiedCallback(BillEntityId, RewardBundle)
+PlayerPresenter.HandleDied()
+  -> PlayerView.SetDeadState()
+  -> SceneController.HandlePlayerDied(...)
+SceneController
+  -> SwitchContext(InputContext.UI)
+  -> PlayerDeathHudView.ShowPlayerDied()
+PlayerDeathHudView / SceneController.Update()
+  -> UI Submit hoặc button Restart
+  -> SceneManager.LoadScene(activeScene.path)
+```
+
+### Inventory HUD refresh
+
+```text
+InventoryService.AddItem/RemoveItem
+  -> IInventoryReadService.Changed
+InventoryReadSource
+  -> Changed
+InventoryHudView
+  -> RefreshItemsText()
 ```
 
 ---
@@ -871,8 +1008,10 @@ Sau khi sửa script:
 4. `PlayerApplication` không import UnityEngine.
 5. `ProjectLifetimeScope` build được với `BillGameCore.Modules.Inventory` reference.
 6. `BootstrapSceneLifetimeScope` có đủ Inspector refs.
-   - Enemy refs là optional, nhưng nếu muốn dùng `EnemySpawner` thì phải gán đủ `EnemyView prefab` và `EnemyConfig`.
+   - `ProjectScope` tồn tại và `SceneScope/BootstrapSceneLifetimeScope` trỏ parent scope đúng về `ProjectScope`.
+   - Có đủ `WalletReadSource`, `InventoryReadSource`, `PlayerView prefab`, `PlayerConfig`, `LootBinder prefab`.
    - `Input` scene object chỉ có `InputReader`; `InputReader._actions` phải trỏ tới `InputSystem_Actions.inputactions`.
+   - `EventSystem/InputSystemUIInputModule` phải dùng cùng `InputActionAsset` với `InputReader`.
    - Không có `PlayerInput` component trên scene object `Input`.
 7. Play scene:
    - Project scope build thành công.
@@ -881,6 +1020,11 @@ Sau khi sửa script:
    - `InputReader.SetControlledEntity()` nhận player id hợp lệ.
    - Player di chuyển bằng input.
    - Player death gọi `SceneController.HandlePlayerDied`.
+   - Death HUD hiện và restart bằng button hoặc `UI Submit` chạy đúng.
+   - Enemy death spawn reward loot và/hoặc item loot đúng theo `EnemyConfig`.
+   - Nhặt reward loot mới tăng `Gold/Exp`.
+   - Nhặt item loot mới tăng inventory và `InventoryHudView` refresh đúng.
+   - Stop Play không còn exception teardown.
 
 Nếu Unity batchmode báo project đang mở, đóng Unity Editor rồi chạy lại compile hoặc kiểm tra Console trực tiếp trong Editor.
 
